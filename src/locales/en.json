@@ -1,0 +1,64 @@
+{
+  "app": {
+    "title": "Airalogy Player",
+    "description": "Your intelligent experiment assistant"
+  },
+  "nav": {
+    "welcome": "Welcome",
+    "projects": "Projects",
+    "settings": "Settings"
+  },
+  "welcome": {
+    "title": "Welcome to Airalogy Player",
+    "subtitle": "Your intelligent experiment assistant",
+    "recentFiles": "Recent Files",
+    "newProject": "New Project",
+    "openProject": "Open Project",
+    "noRecentFiles": "No recent files"
+  },
+  "projects": {
+    "search": "Search projects...",
+    "noProjects": "No projects yet",
+    "createFirst": "Create your first project",
+    "createTitle": "Create New Project",
+    "projectName": "Project Name",
+    "namePlaceholder": "Enter project name",
+    "description": "Description",
+    "descriptionPlaceholder": "Enter project description (optional)",
+    "noDescription": "No description",
+    "starred": "Starred",
+    "nameRequired": "Project name is required",
+    "created": "Project created successfully",
+    "createFailed": "Failed to create project"
+  },
+  "editor": {
+    "title": "Editor",
+    "source": "Source",
+    "wysiwyg": "WYSIWYG",
+    "preview": "Preview",
+    "save": "Save",
+    "saveAs": "Save As",
+    "undo": "Reset",
+    "saved": "Saved",
+    "saveFailed": "Failed to save",
+    "noProject": "No project selected. Open a project first.",
+    "noFiles": "This project has no AIMD files yet.",
+    "newFile": "New File",
+    "fileNamePlaceholder": "e.g. protocol.aimd"
+  },
+  "settings": {
+    "title": "Settings",
+    "language": "Language",
+    "theme": "Theme",
+    "editor": "Editor",
+    "about": "About"
+  },
+  "common": {
+    "cancel": "Cancel",
+    "confirm": "Confirm",
+    "delete": "Delete",
+    "edit": "Edit",
+    "close": "Close",
+    "loading": "Loading..."
+  }
+}

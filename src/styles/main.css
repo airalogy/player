@@ -1,0 +1,55 @@
+/* AimdLab Global Styles */
+:root {
+  /* AIMD Field Colors */
+  --aimd-var-bg: #e3f2fd;
+  --aimd-var-text: #1565c0;
+  --aimd-var-border: #90caf9;
+
+  --aimd-step-bg: #fff9ef;
+  --aimd-step-text: #9a5800;
+  --aimd-step-border: #ffe0b2;
+
+  --aimd-check-bg: #f8fafc;
+  --aimd-check-text: #2b3443;
+  --aimd-check-border: #e0e0e0;
+
+  --aimd-quiz-bg: #fffdf6;
+  --aimd-quiz-text: #4e342e;
+  --aimd-quiz-border: #fff9c4;
+
+  /* App Colors */
+  --aimd-color-primary: #1a73e8;
+  --aimd-color-primary-hover: #1765cb;
+  --aimd-border-color: #90caf9;
+  --aimd-border-color-focus: #4181fd;
+  --aimd-bg-page: #f5f7fa;
+  --aimd-bg-card: #ffffff;
+  --aimd-text-primary: #1a1a2e;
+  --aimd-text-secondary: #555555;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+    "Helvetica Neue", Arial, sans-serif;
+  color: var(--aimd-text-primary);
+  background: var(--aimd-bg-page);
+}
+
+/* Naive UI Overrides */
+.n-input {
+  --n-border: 1px solid var(--aimd-border-color) !important;
+}
+
+.n-input:focus-within {
+  --n-border: 1px solid var(--aimd-border-color-focus) !important;
+}
+
+.n-button--primary-type {
+  --n-color: var(--aimd-color-primary) !important;
+}

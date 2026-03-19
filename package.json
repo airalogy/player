@@ -1,0 +1,50 @@
+{
+  "name": "aimdlab",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vue-tsc --noEmit && vite build",
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build",
+    "type-check": "vue-tsc --noEmit"
+  },
+  "dependencies": {
+    "@airalogy/aimd-core": "workspace:*",
+    "@airalogy/aimd-editor": "workspace:*",
+    "@airalogy/aimd-recorder": "workspace:*",
+    "@airalogy/aimd-renderer": "workspace:*",
+    "@tauri-apps/api": "^2.5.0",
+    "@tauri-apps/plugin-dialog": "^2.2.0",
+    "@tauri-apps/plugin-fs": "^2.2.0",
+    "@tauri-apps/plugin-notification": "^2.2.0",
+    "@tauri-apps/plugin-shell": "^2.2.0",
+    "@tauri-apps/plugin-sql": "^2.2.0",
+    "@vicons/ionicons5": "^0.13.0",
+    "@vueuse/core": "^13.1.0",
+    "monaco-editor": "^0.55.1",
+    "naive-ui": "^2.41.0",
+    "pinia": "^3.0.1",
+    "vue": "^3.5.13",
+    "vue-i18n": "^11.1.2",
+    "vue-router": "^4.5.0"
+  },
+  "devDependencies": {
+    "@tauri-apps/cli": "^2.5.0",
+    "@types/node": "^22.14.1",
+    "@vitejs/plugin-vue": "^5.2.3",
+    "typescript": "~5.7.3",
+    "vite": "^6.3.5",
+    "vite-plugin-monaco-editor": "^1.1.0",
+    "vite-tsconfig-paths": "^5.1.4",
+    "vue-tsc": "^2.2.10"
+  },
+  "pnpm": {
+    "overrides": {
+      "monaco-editor": "^0.55.1"
+    }
+  }
+}
