@@ -1,0 +1,227 @@
+use serde::{Deserialize, Serialize};
+use std::fs;
+use std::path::{Path, PathBuf};
+use tauri::Manager;
+
+// ── Data types ────────────────────────────────────────────────────────────────
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct ProtocolEntry {
+    pub id: String,
+    pub name: String,
+    #[serde(rename = "type")]
+    pub kind: ProtocolKind,
+    pub path: String,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "lowercase")]
+pub enum ProtocolKind {
+    File,
+    Folder,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct WorkspaceInfo {
+    pub path: String,
+    pub name: String,
+    pub last_opened_at: i64,
+    pub last_opened_protocol: Option<String>,
+    pub protocols: Vec<ProtocolEntry>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
+pub struct AppState {
+    pub recent_workspaces: Vec<RecentWorkspace>,
+}
+
+#[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(rename_all = "camelCase")]
+pub struct RecentWorkspace {
+    pub path: String,
+    pub name: String,
+    pub last_opened_at: i64,
+    pub last_opened_protocol: Option<String>,
+}
+
+// ── State persistence ─────────────────────────────────────────────────────────
+
+fn state_path(app: &tauri::AppHandle) -> PathBuf {
+    let dir = app.path().app_data_dir().expect("app data dir");
+    fs::create_dir_all(&dir).ok();
+    dir.join("state.json")
+}
+
+fn load_state(app: &tauri::AppHandle) -> AppState {
+    let path = state_path(app);
+    fs::read_to_string(&path)
+        .ok()
+        .and_then(|s| serde_json::from_str(&s).ok())
+        .unwrap_or_default()
+}
+
+fn save_state(app: &tauri::AppHandle, state: &AppState) -> Result<(), String> {
+    let path = state_path(app);
+    let json = serde_json::to_string_pretty(state).map_err(|e| e.to_string())?;
+    fs::write(path, json).map_err(|e| e.to_string())
+}
+
+fn now_secs() -> i64 {
+    std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_secs() as i64)
+        .unwrap_or(0)
+}
+
+// ── Protocol scanning ─────────────────────────────────────────────────────────
+
+/// Stable ID: relative path from workspace root, url-encoded
+fn protocol_id(workspace: &Path, protocol_path: &Path) -> String {
+    protocol_path
+        .strip_prefix(workspace)
+        .unwrap_or(protocol_path)
+        .to_string_lossy()
+        .replace(std::path::MAIN_SEPARATOR, "/")
+}
+
+fn scan_dir(workspace: &Path, dir: &Path, results: &mut Vec<ProtocolEntry>) {
+    let entries = match fs::read_dir(dir) {
+        Ok(e) => e,
+        Err(_) => return,
+    };
+
+    for entry in entries.flatten() {
+        let path = entry.path();
+        let name = match path.file_name().and_then(|n| n.to_str()) {
+            Some(n) => n.to_string(),
+            None => continue,
+        };
+
+        // skip hidden dirs and common noise
+        if name.starts_with('.') || name == "node_modules" {
+            continue;
+        }
+
+        if path.is_dir() {
+            // folder protocol: contains protocol.json
+            if path.join("protocol.json").exists() {
+                results.push(ProtocolEntry {
+                    id: protocol_id(workspace, &path),
+                    name: folder_protocol_name(&path),
+                    kind: ProtocolKind::Folder,
+                    path: path.to_string_lossy().to_string(),
+                });
+                // don't recurse into folder protocols
+            } else {
+                scan_dir(workspace, &path, results);
+            }
+        } else if path.extension().and_then(|e| e.to_str()) == Some("aimd") {
+            let stem = path
+                .file_stem()
+                .and_then(|s| s.to_str())
+                .unwrap_or(&name)
+                .to_string();
+            results.push(ProtocolEntry {
+                id: protocol_id(workspace, &path),
+                name: stem,
+                kind: ProtocolKind::File,
+                path: path.to_string_lossy().to_string(),
+            });
+        }
+    }
+}
+
+fn folder_protocol_name(path: &Path) -> String {
+    // try reading name from protocol.json, fall back to dir name
+    let manifest = path.join("protocol.json");
+    if let Ok(content) = fs::read_to_string(&manifest) {
+        if let Ok(v) = serde_json::from_str::<serde_json::Value>(&content) {
+            if let Some(name) = v.get("name").and_then(|n| n.as_str()) {
+                return name.to_string();
+            }
+        }
+    }
+    path.file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("Untitled")
+        .to_string()
+}
+
+// ── Tauri commands ────────────────────────────────────────────────────────────
+
+#[tauri::command]
+pub async fn open_workspace(
+    app: tauri::AppHandle,
+    path: String,
+) -> Result<WorkspaceInfo, String> {
+    let workspace = PathBuf::from(&path);
+    if !workspace.is_dir() {
+        return Err(format!("Not a directory: {}", path));
+    }
+
+    let name = workspace
+        .file_name()
+        .and_then(|n| n.to_str())
+        .unwrap_or("Workspace")
+        .to_string();
+
+    let mut protocols = Vec::new();
+    scan_dir(&workspace, &workspace, &mut protocols);
+
+    let now = now_secs();
+    let mut state = load_state(&app);
+
+    // upsert into recent list
+    state.recent_workspaces.retain(|w| w.path != path);
+    state.recent_workspaces.insert(
+        0,
+        RecentWorkspace {
+            path: path.clone(),
+            name: name.clone(),
+            last_opened_at: now,
+            last_opened_protocol: None,
+        },
+    );
+    state.recent_workspaces.truncate(20);
+    save_state(&app, &state)?;
+
+    Ok(WorkspaceInfo {
+        path,
+        name,
+        last_opened_at: now,
+        last_opened_protocol: None,
+        protocols,
+    })
+}
+
+#[tauri::command]
+pub async fn scan_workspace(path: String) -> Result<Vec<ProtocolEntry>, String> {
+    let workspace = PathBuf::from(&path);
+    if !workspace.is_dir() {
+        return Err(format!("Not a directory: {}", path));
+    }
+    let mut protocols = Vec::new();
+    scan_dir(&workspace, &workspace, &mut protocols);
+    Ok(protocols)
+}
+
+#[tauri::command]
+pub async fn get_recent_workspaces(app: tauri::AppHandle) -> Result<Vec<RecentWorkspace>, String> {
+    Ok(load_state(&app).recent_workspaces)
+}
+
+#[tauri::command]
+pub async fn set_last_opened_protocol(
+    app: tauri::AppHandle,
+    workspace_path: String,
+    protocol_id: String,
+) -> Result<(), String> {
+    let mut state = load_state(&app);
+    if let Some(w) = state.recent_workspaces.iter_mut().find(|w| w.path == workspace_path) {
+        w.last_opened_protocol = Some(protocol_id);
+    }
+    save_state(&app, &state)
+}

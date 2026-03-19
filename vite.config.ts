@@ -17,6 +17,10 @@ export default defineConfig(async () => ({
   resolve: {
     alias: {
       "@": resolve(__dirname, "src"),
+      "@airalogy/aimd-editor/vue": resolve(__dirname, "../packages/aimd-editor/src/vue/index.ts"),
+      "@airalogy/aimd-editor/embedded": resolve(__dirname, "../packages/aimd-editor/src/embedded.ts"),
+      "@airalogy/aimd-editor/wysiwyg": resolve(__dirname, "../packages/aimd-editor/src/wysiwyg.ts"),
+      "@airalogy/aimd-editor/monaco": resolve(__dirname, "../packages/aimd-editor/src/monaco.ts"),
     },
   },
   clearScreen: false,
