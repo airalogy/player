@@ -38,7 +38,7 @@ function onLocaleChange(value: string) {
       </NCard>
 
       <NCard title="About" style="margin-top: 24px">
-        <p><strong>AimdLab</strong> v1.0.0</p>
+        <p><strong>Airalogy Player</strong> v1.0.0</p>
         <p style="margin-top: 8px; color: var(--aimd-text-secondary)">
           {{ t("app.description") }}
         </p>

@@ -4,7 +4,7 @@ import { useRouter, useRoute } from "vue-router"
 import { useI18n } from "vue-i18n"
 import { NButton, NSpace, NSelect, NEmpty, NSpin, NInput, NModal, useMessage } from "naive-ui"
 import { AimdEditor } from "@airalogy/aimd-editor"
-import { useProjectStore } from "@/stores/project"
+import { useWorkspaceStore } from "@/stores/workspace"
 import { useEditorStore } from "@/stores/editor"
 import { invoke } from "@tauri-apps/api/core"
 
@@ -13,10 +13,10 @@ const route = useRoute()
 const { t } = useI18n()
 const message = useMessage()
 
-const projectStore = useProjectStore()
+const workspaceStore = useWorkspaceStore()
 const editorStore = useEditorStore()
 
-type Status = "loading" | "no-project" | "no-files" | "ready"
+type Status = "loading" | "no-protocol" | "no-files" | "ready"
 
 const status = ref<Status>("loading")
 const files = ref<string[]>([])
@@ -27,87 +27,70 @@ const showNewFileModal = ref(false)
 const newFileName = ref("")
 const creatingFile = ref(false)
 
-const projectId = computed(() => route.query.project as string | undefined)
-const fileParam = computed(() => route.query.file as string | undefined)
+const protocolId = computed(() => route.query.id as string | undefined)
+
+const protocol = computed(() =>
+  workspaceStore.current?.protocols.find((p) => p.id === protocolId.value) ?? null
+)
 
 const fileSelectOptions = computed(() =>
   files.value.map((f) => ({ label: f, value: f }))
 )
 
 async function load() {
-  const id = projectId.value
-  if (!id) {
-    status.value = "no-project"
+  if (!protocol.value) {
+    status.value = "no-protocol"
     return
   }
 
   status.value = "loading"
 
-  let project =
-    projectStore.currentProject?.id === id
-      ? projectStore.currentProject
-      : await projectStore.openProject(id)
+  if (protocol.value.type === "file") {
+    const content = await invoke<string>("read_file", { path: protocol.value.path })
+    fileContent.value = content
+    editorStore.loadContent(content, protocol.value.path)
+    files.value = [protocol.value.path.split("/").pop()!]
+    selectedFile.value = files.value[0]
+    status.value = "ready"
+  } else {
+    const entries: { name: string; is_dir: boolean }[] = await invoke("list_files", {
+      dir: protocol.value.path,
+    })
+    files.value = entries.filter((f) => !f.is_dir && f.name.endsWith(".aimd")).map((f) => f.name)
 
-  if (!project) {
-    status.value = "no-project"
-    return
+    if (files.value.length === 0) {
+      status.value = "no-files"
+      return
+    }
+
+    await openFile(files.value[0])
+    status.value = "ready"
   }
-
-  let entries: { name: string; is_dir: boolean }[] = []
-  try {
-    entries = await invoke("list_files", { dir: project.path })
-  } catch (e) {
-    console.error("Failed to list files:", e)
-  }
-
-  files.value = entries
-    .filter((f) => !f.is_dir && f.name.endsWith(".aimd"))
-    .map((f) => f.name)
-
-  if (files.value.length === 0) {
-    status.value = "no-files"
-    return
-  }
-
-  const target =
-    fileParam.value && files.value.includes(fileParam.value)
-      ? fileParam.value
-      : files.value[0]
-
-  await openFile(project.path, target)
-  status.value = "ready"
 }
 
-async function openFile(projectPath: string, filename: string) {
-  const path = `${projectPath}/${filename}`
+async function openFile(filename: string) {
+  if (!protocol.value) return
+  const path =
+    protocol.value.type === "file"
+      ? protocol.value.path
+      : `${protocol.value.path}/${filename}`
   const content = await invoke<string>("read_file", { path })
   fileContent.value = content
   editorStore.loadContent(content, path)
   selectedFile.value = filename
-  router.replace({
-    query: { ...route.query, file: filename },
-  })
 }
 
 async function handleFileSwitch(filename: string) {
   if (filename === selectedFile.value) return
-  if (editorStore.isDirty) {
-    await save()
-  }
-  const project = projectStore.currentProject
-  if (project) {
-    await openFile(project.path, filename)
-  }
+  if (editorStore.isDirty) await save()
+  await openFile(filename)
 }
 
 async function save() {
   if (!editorStore.filePath) return
   saving.value = true
   try {
-    await invoke("write_file", {
-      path: editorStore.filePath,
-      content: fileContent.value,
-    })
+    await invoke("write_file", { path: editorStore.filePath, content: fileContent.value })
     editorStore.markClean()
     message.success(t("editor.saved"))
   } catch (e) {
@@ -119,20 +102,17 @@ async function save() {
 
 async function createNewFile() {
   let name = newFileName.value.trim()
-  if (!name) return
+  if (!name || !protocol.value || protocol.value.type === "file") return
   if (!name.endsWith(".aimd")) name += ".aimd"
-
-  const project = projectStore.currentProject
-  if (!project) return
 
   creatingFile.value = true
   try {
-    const path = `${project.path}/${name}`
+    const path = `${protocol.value.path}/${name}`
     await invoke("write_file", { path, content: `# ${name.replace(".aimd", "")}\n\n` })
     files.value.push(name)
     showNewFileModal.value = false
     newFileName.value = ""
-    await openFile(project.path, name)
+    await openFile(name)
     status.value = "ready"
   } catch (e) {
     message.error(String(e))
@@ -147,30 +127,24 @@ function handleContentChange(val: string) {
 }
 
 function goBack() {
-  if (projectId.value) {
-    router.push(`/protocol?project=${projectId.value}`)
+  if (protocolId.value) {
+    router.push(`/protocol?id=${encodeURIComponent(protocolId.value)}`)
   } else {
     router.push("/projects")
   }
 }
 
 onMounted(load)
-
-// Reload when project param changes (e.g. navigating between projects)
-watch(projectId, (newId, oldId) => {
-  if (newId !== oldId) load()
-})
+watch(protocolId, (newId, oldId) => { if (newId !== oldId) load() })
 </script>
 
 <template>
   <div class="editor-page">
-    <!-- Loading -->
     <div v-if="status === 'loading'" class="center-state">
       <NSpin size="large" />
     </div>
 
-    <!-- No project selected -->
-    <div v-else-if="status === 'no-project'" class="center-state">
+    <div v-else-if="status === 'no-protocol'" class="center-state">
       <NEmpty :description="t('editor.noProject')">
         <template #extra>
           <NButton type="primary" @click="router.push('/projects')">
@@ -180,7 +154,6 @@ watch(projectId, (newId, oldId) => {
       </NEmpty>
     </div>
 
-    <!-- Project has no AIMD files -->
     <div v-else-if="status === 'no-files'" class="center-state">
       <NEmpty :description="t('editor.noFiles')">
         <template #extra>
@@ -191,7 +164,6 @@ watch(projectId, (newId, oldId) => {
       </NEmpty>
     </div>
 
-    <!-- Ready: editor -->
     <template v-else>
       <header class="editor-header">
         <NSpace align="center" :size="8">
@@ -202,7 +174,7 @@ watch(projectId, (newId, oldId) => {
               </svg>
             </template>
           </NButton>
-          <span class="project-name">{{ projectStore.currentProject?.name }}</span>
+          <span class="project-name">{{ protocol?.name }}</span>
           <span class="sep">/</span>
           <NSelect
             v-if="files.length > 1"
@@ -246,7 +218,6 @@ watch(projectId, (newId, oldId) => {
       </main>
     </template>
 
-    <!-- New file modal -->
     <NModal
       v-model:show="showNewFileModal"
       preset="card"

@@ -2,11 +2,11 @@
 import { computed } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { NLayout, NLayoutSider, NLayoutContent, NMenu, NMessageProvider, NDialogProvider, NNotificationProvider } from "naive-ui"
-import { useProjectStore } from "@/stores/project"
+import { useWorkspaceStore } from "@/stores/workspace"
 
 const route = useRoute()
 const router = useRouter()
-const projectStore = useProjectStore()
+const workspaceStore = useWorkspaceStore()
 
 const menuOptions = [
   {
@@ -23,9 +23,9 @@ const menuOptions = [
     label: "Editor",
     key: "editor",
     onClick: () => {
-      const p = projectStore.currentProject
-      if (p) {
-        router.push({ path: "/editor", query: { project: p.id } })
+      const ws = workspaceStore.current
+      if (ws) {
+        router.push({ path: "/editor", query: { workspace: ws.path } })
       } else {
         router.push("/projects")
       }
@@ -66,7 +66,7 @@ function handleMenuUpdate(key: string) {
             style="background: var(--aimd-bg-card)"
           >
             <div class="app-logo">
-              <h1 class="logo-text">AimdLab</h1>
+              <h1 class="logo-text">Airalogy Player</h1>
             </div>
             <NMenu :value="activeKey" :options="menuOptions" @update:value="handleMenuUpdate" />
           </NLayoutSider>

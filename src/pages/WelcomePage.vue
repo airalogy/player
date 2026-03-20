@@ -3,34 +3,38 @@ import { ref, onMounted } from "vue"
 import { useRouter } from "vue-router"
 import { useI18n } from "vue-i18n"
 import { NButton, NSpace, NEmpty } from "naive-ui"
-import { useProjectStore } from "@/stores/project"
-import type { Project } from "@/stores/project"
+import { open } from "@tauri-apps/plugin-dialog"
+import { useWorkspaceStore } from "@/stores/workspace"
+import type { RecentWorkspace } from "@/stores/workspace"
 
 const router = useRouter()
 const { t } = useI18n()
-const projectStore = useProjectStore()
+const workspaceStore = useWorkspaceStore()
 
-const recentProjects = ref<Project[]>([])
+const recentWorkspaces = ref<RecentWorkspace[]>([])
 const loading = ref(true)
 
 onMounted(async () => {
-  projectStore.fetchProjects().finally(() => {
-    recentProjects.value = projectStore.projects.slice(0, 6)
-    loading.value = false
-  })
+  await workspaceStore.fetchRecentWorkspaces()
+  recentWorkspaces.value = workspaceStore.recentWorkspaces.slice(0, 6)
+  loading.value = false
 })
 
-function openProject(project: Project) {
-  projectStore.setCurrentProject(project)
-  router.push(`/protocol?project=${project.id}`)
+async function openWorkspaceDialog() {
+  const selected = await open({ directory: true, multiple: false })
+  if (!selected) return
+  const path = typeof selected === "string" ? selected : selected[0]
+  const ws = await workspaceStore.openWorkspace(path)
+  if (ws) router.push("/projects")
 }
 
-function goToProjects() {
-  router.push("/projects")
+async function openRecent(ws: RecentWorkspace) {
+  const info = await workspaceStore.openWorkspace(ws.path)
+  if (info) router.push("/projects")
 }
 
 function formatDate(timestamp: number): string {
-  return new Date(timestamp).toLocaleDateString()
+  return new Date(timestamp * 1000).toLocaleDateString()
 }
 </script>
 
@@ -43,35 +47,28 @@ function formatDate(timestamp: number): string {
 
     <main class="welcome-main">
       <NSpace vertical :size="24" class="action-buttons">
-        <NButton type="primary" size="large" @click="goToProjects">
-          {{ t("welcome.newProject") }}
-        </NButton>
-        <NButton size="large" @click="goToProjects">
+        <NButton type="primary" size="large" @click="openWorkspaceDialog">
           {{ t("welcome.openProject") }}
         </NButton>
       </NSpace>
 
       <section class="recent-files">
         <h2 class="section-title">{{ t("welcome.recentFiles") }}</h2>
-        <div v-if="recentProjects.length > 0" class="recent-grid">
+        <div v-if="recentWorkspaces.length > 0" class="recent-grid">
           <div
-            v-for="project in recentProjects"
-            :key="project.id"
+            v-for="ws in recentWorkspaces"
+            :key="ws.path"
             class="recent-card"
-            @click="openProject(project)"
+            @click="openRecent(ws)"
           >
             <div class="recent-card-icon">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
-                <polyline points="14 2 14 8 20 8"/>
-                <line x1="16" y1="13" x2="8" y2="13"/>
-                <line x1="16" y1="17" x2="8" y2="17"/>
-                <polyline points="10 9 9 9 8 9"/>
+                <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
               </svg>
             </div>
             <div class="recent-card-info">
-              <h3 class="recent-card-name">{{ project.name }}</h3>
-              <p class="recent-card-date">{{ formatDate(project.updated_at) }}</p>
+              <h3 class="recent-card-name">{{ ws.name }}</h3>
+              <p class="recent-card-date">{{ formatDate(ws.lastOpenedAt) }}</p>
             </div>
           </div>
         </div>
@@ -88,11 +85,7 @@ function formatDate(timestamp: number): string {
   flex-direction: column;
   align-items: center;
   padding: 80px 24px;
-  background: linear-gradient(
-    135deg,
-    rgba(26, 115, 232, 0.08) 0%,
-    transparent 50%
-  );
+  background: linear-gradient(135deg, rgba(26, 115, 232, 0.08) 0%, transparent 50%);
 }
 
 .welcome-header {

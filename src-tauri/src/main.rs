@@ -8,20 +8,18 @@ pub fn run() {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info"))
         .init();
 
-    log::info!("Starting AimdLab application");
+    log::info!("Starting Airalogy Player application");
 
     tauri::Builder::default()
-        .plugin(tauri_plugin_sql::Builder::new().build())
         .plugin(tauri_plugin_fs::init())
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_shell::init())
         .invoke_handler(tauri::generate_handler![
-            commands::project::get_db_path_cmd,
-            commands::project::create_project,
-            commands::project::list_projects,
-            commands::project::open_project,
-            commands::project::delete_project,
+            commands::workspace::open_workspace,
+            commands::workspace::scan_workspace,
+            commands::workspace::get_recent_workspaces,
+            commands::workspace::set_last_opened_protocol,
             commands::file::read_file,
             commands::file::write_file,
             commands::file::list_files,
@@ -29,7 +27,7 @@ pub fn run() {
             commands::file::delete_file,
         ])
         .setup(|_app| {
-            log::info!("AimdLab setup complete");
+            log::info!("Airalogy Player setup complete");
 
             #[cfg(debug_assertions)]
             {

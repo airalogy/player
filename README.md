@@ -1,4 +1,4 @@
-# AimdLab
+# Airalogy Player
 
 Experimental Protocol Management Application built with Tauri 2.x + Vue 3.
 
