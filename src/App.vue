@@ -2,25 +2,32 @@
 import { computed } from "vue"
 import { useRoute, useRouter } from "vue-router"
 import { NLayout, NLayoutSider, NLayoutContent, NMenu, NMessageProvider, NDialogProvider, NNotificationProvider } from "naive-ui"
+import { useI18n } from "vue-i18n"
 import { useWorkspaceStore } from "@/stores/workspace"
 
 const route = useRoute()
 const router = useRouter()
 const workspaceStore = useWorkspaceStore()
+const { t } = useI18n()
 
-const menuOptions = [
+const menuOptions = computed(() => [
   {
-    label: "Welcome",
+    label: t("nav.welcome"),
     key: "welcome",
     onClick: () => router.push("/"),
   },
   {
-    label: "Projects",
+    label: t("nav.projects"),
     key: "projects",
     onClick: () => router.push("/projects"),
   },
   {
-    label: "Editor",
+    label: t("nav.varCards"),
+    key: "var-cards",
+    onClick: () => router.push("/var-cards"),
+  },
+  {
+    label: t("editor.title"),
     key: "editor",
     onClick: () => {
       const ws = workspaceStore.current
@@ -32,16 +39,17 @@ const menuOptions = [
     },
   },
   {
-    label: "Settings",
+    label: t("nav.settings"),
     key: "settings",
     onClick: () => router.push("/settings"),
   },
-]
+])
 
 const activeKey = computed(() => {
   const path = route.path
   if (path === "/") return "welcome"
   if (path.startsWith("/projects")) return "projects"
+  if (path.startsWith("/var-cards")) return "var-cards"
   if (path.startsWith("/protocol")) return "projects"
   if (path.startsWith("/editor")) return "editor"
   if (path.startsWith("/settings")) return "settings"
@@ -49,7 +57,7 @@ const activeKey = computed(() => {
 })
 
 function handleMenuUpdate(key: string) {
-  const option = menuOptions.find((o) => o.key === key)
+  const option = menuOptions.value.find((o) => o.key === key)
   if (option?.onClick) option.onClick()
 }
 </script>

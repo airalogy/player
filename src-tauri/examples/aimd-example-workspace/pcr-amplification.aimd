@@ -1,0 +1,65 @@
+# PCR Amplification Protocol
+
+## Overview
+
+Standard PCR amplification of gene fragment using Taq DNA polymerase.
+
+## Materials
+
+- [ ] Template DNA (10-100 ng/μL)
+- [ ] Forward primer (10 μM)
+- [ ] Reverse primer (10 μM)
+- [ ] Taq DNA polymerase (5 U/μL)
+- [ ] 10× PCR buffer
+- [ ] dNTPs (10 mM each)
+- [ ] Nuclease-free water
+- [ ] 0.2 mL PCR tubes
+
+## Thermocycler Program
+
+| Step | Temperature | Duration | Cycles |
+|------|-------------|----------|--------|
+| Initial denaturation | 95°C | 3 min | 1 |
+| Denaturation | 95°C | 30 sec | 35 |
+| Annealing | 58°C | 30 sec | 35 |
+| Extension | 72°C | 1 min/kb | 35 |
+| Final extension | 72°C | 5 min | 1 |
+| Hold | 4°C | ∞ | - |
+
+## Reaction Mix (25 μL)
+
+| Component | Volume | Final |
+|-----------|--------|-------|
+| 10× Buffer | 2.5 μL | 1× |
+| dNTPs | 0.5 μL | 200 μM |
+| Forward primer | 1 μL | 0.4 μM |
+| Reverse primer | 1 μL | 0.4 μM |
+| Taq polymerase | 0.25 μL | 1.25 U |
+| Template | 1-5 μL | 10-100 ng |
+| Water | to 25 μL | - |
+
+## Procedure
+
+### 1. Prepare Reaction Mix
+
+1. Thaw reagents on ice
+2. Vortex and centrifuge all components
+3. Prepare master mix (all components except template)
+
+### 2. Aliquot and Add Template
+
+1. Add 20 μL master mix to each tube
+2. Add template DNA to respective tubes
+3. Cap tubes and centrifuge briefly
+
+### 3. Run PCR
+
+1. Place tubes in thermocycler
+2. Select and run the PCR program
+3. After completion, store at 4°C
+
+## Analysis
+
+- Run 5 μL product on 1% agarose gel
+- Expected band size: ~850 bp
+- Visualize under UV with ethidium bromide

@@ -2,8 +2,9 @@
 import { ref, onMounted } from "vue"
 import { useRouter } from "vue-router"
 import { useI18n } from "vue-i18n"
-import { NButton, NSpace, NEmpty } from "naive-ui"
+import { NButton, NSpace, NEmpty, NSpin } from "naive-ui"
 import { open } from "@tauri-apps/plugin-dialog"
+import { invoke } from "@tauri-apps/api/core"
 import { useWorkspaceStore } from "@/stores/workspace"
 import type { RecentWorkspace } from "@/stores/workspace"
 
@@ -18,7 +19,24 @@ onMounted(async () => {
   await workspaceStore.fetchRecentWorkspaces()
   recentWorkspaces.value = workspaceStore.recentWorkspaces.slice(0, 6)
   loading.value = false
+
+  const isFirst = await invoke<boolean>("check_first_launch")
+  if (isFirst && recentWorkspaces.value.length === 0) {
+    await openExampleWorkspace()
+  }
 })
+
+async function openExampleWorkspace() {
+  try {
+    const ws = await invoke("open_example_workspace")
+    if (ws) {
+      await workspaceStore.fetchRecentWorkspaces()
+      router.push("/projects")
+    }
+  } catch (e) {
+    console.error("Failed to open example workspace:", e)
+  }
+}
 
 async function openWorkspaceDialog() {
   const selected = await open({ directory: true, multiple: false })

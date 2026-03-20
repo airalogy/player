@@ -6,7 +6,8 @@
   "nav": {
     "welcome": "欢迎",
     "projects": "项目",
-    "settings": "设置"
+    "settings": "设置",
+    "varCards": "变量卡片"
   },
   "welcome": {
     "title": "欢迎使用 Airalogy Player",
@@ -44,7 +45,66 @@
     "noProject": "未选择项目，请先打开一个项目。",
     "noFiles": "该项目还没有 AIMD 文件。",
     "newFile": "新建文件",
-    "fileNamePlaceholder": "例如 protocol.aimd"
+    "fileNamePlaceholder": "例如 protocol.aimd",
+    "manageCards": "管理卡片"
+  },
+  "varCards": {
+    "eyebrow": "卡片市场",
+    "title": "变量卡片市场",
+    "subtitle": "浏览可复用的记录卡片、查看实时预览，并把内置卡片克隆到你自己的卡片目录中。",
+    "searchPlaceholder": "搜索卡片、标签或记录类型...",
+    "empty": "当前筛选下暂无卡片",
+    "filters": {
+      "all": "全部卡片",
+      "builtin": "内置",
+      "user": "我的卡片"
+    },
+    "stats": {
+      "total": "可用卡片",
+      "builtin": "内置卡片",
+      "user": "用户卡片"
+    },
+    "badges": {
+      "builtin": "内置",
+      "user": "用户",
+      "cloned": "克隆"
+    },
+    "actions": {
+      "preview": "预览",
+      "clone": "克隆",
+      "clearSearch": "清空搜索"
+    },
+    "heroPanel": {
+      "label": "共享运行时",
+      "title": "直接预览 Record 的真实渲染效果",
+      "description": "市场页面围绕实时 recorder 预览构建，让画廊缩略图、详情预览和后续运行时渲染保持一致。",
+      "tagPreview": "实时预览",
+      "tagClone": "克隆内置卡片",
+      "tagRuntime": "基于 Recorder"
+    },
+    "preview": {
+      "emptyTitle": "变量卡片预览",
+      "emptyState": "选择一张卡片以查看它的运行时预览。"
+    },
+    "feedback": {
+      "cloneSuccess": "{title} 克隆成功",
+      "cloneLocalOnly": "{title} 已在当前会话中本地克隆",
+      "studioUnavailable": "当前代码分支中还没有 Card Studio。"
+    },
+    "market": {
+      "title": "变量卡片市场"
+    },
+    "studio": {
+      "title": "卡片工作室",
+      "description": "无需编写 Vue 组件即可调整卡片元数据、字段布局、行为和演示值。",
+      "readOnlyDescription": "该内置卡片已锁定以保证稳定行为。请先克隆，再编辑用户版本。",
+      "readOnlyBanner": "内置卡片为只读。请先点击“克隆”创建用户版本后再编辑。",
+      "saved": "卡片已保存",
+      "cloned": "卡片已克隆",
+      "storeUnavailable": "当前构建中变量卡片 store 尚不可用。",
+      "cardNotFound": "未找到该卡片。",
+      "cloneUnavailable": "当前无法克隆这张卡片。"
+    }
   },
   "settings": {
     "title": "设置",
@@ -56,6 +116,7 @@
   "common": {
     "cancel": "取消",
     "confirm": "确认",
+    "clone": "克隆",
     "delete": "删除",
     "edit": "编辑",
     "close": "关闭",

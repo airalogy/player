@@ -3,9 +3,10 @@ import { ref, computed, onMounted, watch } from "vue"
 import { useRouter, useRoute } from "vue-router"
 import { useI18n } from "vue-i18n"
 import { NButton, NSpace, NSelect, NEmpty, NSpin, NInput, NModal, useMessage } from "naive-ui"
-import { AimdEditor } from "@airalogy/aimd-editor"
+import { AimdEditor, type AimdVarTypePresetOption } from "@airalogy/aimd-editor"
 import { useWorkspaceStore } from "@/stores/workspace"
 import { useEditorStore } from "@/stores/editor"
+import { loadEditorVarTypePresets } from "@/features/var-cards/runtime/createEditorVarTypePresets"
 import { invoke } from "@tauri-apps/api/core"
 
 const router = useRouter()
@@ -26,6 +27,7 @@ const saving = ref(false)
 const showNewFileModal = ref(false)
 const newFileName = ref("")
 const creatingFile = ref(false)
+const varTypePresets = ref<AimdVarTypePresetOption[]>([])
 
 const protocolId = computed(() => route.query.id as string | undefined)
 
@@ -66,6 +68,10 @@ async function load() {
     await openFile(files.value[0])
     status.value = "ready"
   }
+}
+
+async function loadVarCardPresets() {
+  varTypePresets.value = await loadEditorVarTypePresets()
 }
 
 async function openFile(filename: string) {
@@ -134,7 +140,16 @@ function goBack() {
   }
 }
 
-onMounted(load)
+function openCardStudio() {
+  router.push({
+    path: "/var-cards",
+    query: protocolId.value ? { from: "editor", protocolId: protocolId.value } : undefined,
+  })
+}
+
+onMounted(async () => {
+  await Promise.all([load(), loadVarCardPresets()])
+})
 watch(protocolId, (newId, oldId) => { if (newId !== oldId) load() })
 </script>
 
@@ -189,6 +204,9 @@ watch(protocolId, (newId, oldId) => { if (newId !== oldId) load() })
 
         <NSpace :size="8">
           <span v-if="editorStore.isDirty" class="dirty-indicator">●</span>
+          <NButton size="small" @click="openCardStudio">
+            {{ t("editor.manageCards") }}
+          </NButton>
           <NButton size="small" @click="showNewFileModal = true">
             {{ t("editor.newFile") }}
           </NButton>
@@ -213,6 +231,7 @@ watch(protocolId, (newId, oldId) => { if (newId !== oldId) load() })
           :show-aimd-toolbar="true"
           :show-md-toolbar="true"
           :min-height="0"
+          :var-type-plugins="varTypePresets"
           @update:model-value="handleContentChange"
         />
       </main>

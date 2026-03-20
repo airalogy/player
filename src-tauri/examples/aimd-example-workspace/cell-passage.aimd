@@ -1,0 +1,56 @@
+# Cell Passage Protocol
+
+## Overview
+
+This protocol describes the routine passage of adherent mammalian cells (HEK-293T) for maintenance culture.
+
+## Materials
+
+- [ ] HEK-293T cells (80% confluent in T-75 flask)
+- [ ] Warm PBS (37°C)
+- [ ] Warm Trypsin-EDTA (0.25%, 37°C)
+- [ ] Complete growth medium (DMEM + 10% FBS)
+- [ ] Hemocytometer or automated cell counter
+
+## Procedure
+
+### 1. Pre-warm Reagents
+
+ Incubate PBS, Trypsin-EDTA, and growth medium in 37°C water bath for 15-30 minutes.
+
+### 2. Aspirate Medium
+
+1. Observe cell morphology under microscope
+2. Note: Cells should be 80-90% confluent
+3. Aspirate spent medium from flask
+
+### 3. Wash Cells
+
+1. Add 5 mL PBS to flask
+2. Gently rock to wash cell surface
+3. Aspirate PBS
+
+### 4. Trypsinization
+
+1. Add 2 mL Trypsin-EDTA to flask
+2. Incubate at 37°C for 3-5 minutes
+3. Tap flask to dislodge cells
+4. Observe under microscope - cells should be rounded
+
+### 5. Neutralize and Count
+
+1. Add 8 mL complete medium to neutralize trypsin
+2. Pipette up and down to create single-cell suspension
+3. Count cells using hemocytometer
+
+### 6. Passage
+
+1. Seed at 1:4 to 1:10 split ratio
+2. Add appropriate volume to new flask
+3. Top up with fresh medium to final volume
+
+## Notes
+
+- Passage number: P15-P20 recommended
+- Do not let cells become over-confluent
+- Change medium every 2-3 days

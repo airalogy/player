@@ -3,6 +3,8 @@ use std::fs;
 use std::path::{Path, PathBuf};
 use tauri::Manager;
 
+const EXAMPLE_WORKSPACE_NAME: &str = "aimd-example-workspace";
+
 // ── Data types ────────────────────────────────────────────────────────────────
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -74,6 +76,34 @@ fn now_secs() -> i64 {
         .duration_since(std::time::UNIX_EPOCH)
         .map(|d| d.as_secs() as i64)
         .unwrap_or(0)
+}
+
+// ── First launch detection ───────────────────────────────────────────────────
+
+fn is_first_launch(app: &tauri::AppHandle) -> bool {
+    load_state(app).recent_workspaces.is_empty()
+}
+
+fn copy_dir_recursive(src: &Path, dst: &Path) -> Result<(), String> {
+    if !src.is_dir() {
+        return Err(format!("Source is not a directory: {}", src.display()));
+    }
+
+    fs::create_dir_all(dst).map_err(|e| format!("Failed to create directory: {}", e))?;
+
+    for entry in fs::read_dir(src).map_err(|e| format!("Failed to read directory: {}", e))? {
+        let entry = entry.map_err(|e| format!("Failed to read entry: {}", e))?;
+        let src_path = entry.path();
+        let dst_path = dst.join(entry.file_name());
+
+        if src_path.is_dir() {
+            copy_dir_recursive(&src_path, &dst_path)?;
+        } else {
+            fs::copy(&src_path, &dst_path)
+                .map_err(|e| format!("Failed to copy file: {}", e))?;
+        }
+    }
+    Ok(())
 }
 
 // ── Protocol scanning ─────────────────────────────────────────────────────────
@@ -224,4 +254,41 @@ pub async fn set_last_opened_protocol(
         w.last_opened_protocol = Some(protocol_id);
     }
     save_state(&app, &state)
+}
+
+#[tauri::command]
+pub async fn check_first_launch(app: tauri::AppHandle) -> Result<bool, String> {
+    Ok(is_first_launch(&app))
+}
+
+#[tauri::command]
+pub async fn open_example_workspace(app: tauri::AppHandle) -> Result<WorkspaceInfo, String> {
+    let resource_dir = app
+        .path()
+        .resource_dir()
+        .map_err(|e| format!("Failed to get resource directory: {}", e))?;
+
+    let src_example = resource_dir.join("examples").join(EXAMPLE_WORKSPACE_NAME);
+
+    if !src_example.exists() {
+        return Err(format!(
+            "Example workspace not found in resources: {}",
+            src_example.display()
+        ));
+    }
+
+    let temp_dir = std::env::temp_dir().join(format!(
+        "aimdlab-example-{}",
+        std::process::id()
+    ));
+
+    if temp_dir.exists() {
+        fs::remove_dir_all(&temp_dir)
+            .map_err(|e| format!("Failed to clean temp directory: {}", e))?;
+    }
+
+    copy_dir_recursive(&src_example, &temp_dir)?;
+
+    let path = temp_dir.to_string_lossy().to_string();
+    open_workspace(app, path).await
 }

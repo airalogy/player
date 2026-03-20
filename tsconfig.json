@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "baseUrl": ".",
     "target": "ESNext",
     "useDefineForClassFields": true,
     "module": "ESNext",
@@ -17,7 +18,17 @@
     "noUnusedParameters": false,
     "noFallthroughCasesInSwitch": true,
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@airalogy/aimd-core": ["../packages/aimd-core/src"],
+      "@airalogy/aimd-core/*": ["../packages/aimd-core/src/*"],
+      "@airalogy/aimd-editor": ["../packages/aimd-editor/src"],
+      "@airalogy/aimd-editor/*": ["../packages/aimd-editor/src/*"],
+      "@airalogy/aimd-renderer": ["../packages/aimd-renderer/src"],
+      "@airalogy/aimd-renderer/*": ["../packages/aimd-renderer/src/*"],
+      "@airalogy/aimd-recorder": ["../packages/aimd-recorder/src"],
+      "@airalogy/aimd-recorder/*": ["../packages/aimd-recorder/src/*"],
+      "monaco-editor": ["./node_modules/monaco-editor/esm/vs/editor/editor.api.d.ts"],
+      "monaco-editor/*": ["./node_modules/monaco-editor/*"]
     }
   },
   "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue"],

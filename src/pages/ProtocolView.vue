@@ -9,6 +9,7 @@ import type { AimdProtocolRecordData } from "@airalogy/aimd-recorder"
 import { useWorkspaceStore } from "@/stores/workspace"
 import ProtocolNavigatorRail from "@/components/ProtocolNavigatorRail.vue"
 import { useProtocolNavigator } from "@/composables/useProtocolNavigator"
+import { useVarCardRecorder } from "@/composables/useVarCardRecorder"
 import { invoke } from "@tauri-apps/api/core"
 
 const router = useRouter()
@@ -25,6 +26,7 @@ const content = ref("")
 const record = ref<AimdProtocolRecordData>(createEmptyProtocolRecordData())
 const scrollContainerRef = ref<HTMLElement | null>(null)
 const protocolDocumentRef = ref<HTMLElement | null>(null)
+const { typePlugins: recorderTypePlugins } = useVarCardRecorder()
 
 const protocolId = computed(() => route.query.id as string | undefined)
 
@@ -177,7 +179,12 @@ watch(protocolId, (newId, oldId) => { if (newId !== oldId) load() })
       <main ref="scrollContainerRef" class="protocol-content">
         <div class="protocol-layout">
           <div ref="protocolDocumentRef" class="protocol-document">
-            <AimdRecorder v-model="record" :content="content" locale="en-US" />
+            <AimdRecorder
+              v-model="record"
+              :content="content"
+              :type-plugins="recorderTypePlugins"
+              locale="en-US"
+            />
           </div>
           <ProtocolNavigatorRail
             v-if="anchors.length > 0"

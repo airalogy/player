@@ -7,9 +7,9 @@
     "dev": "vite",
     "build": "vue-tsc --noEmit && vite build",
     "preview": "vite preview",
-    "tauri": "tauri",
-    "tauri:dev": "tauri dev",
-    "tauri:build": "tauri build",
+    "tauri": "node scripts/tauri-cli.mjs",
+    "tauri:dev": "node scripts/tauri-cli.mjs dev",
+    "tauri:build": "node scripts/tauri-cli.mjs build",
     "type-check": "vue-tsc --noEmit"
   },
   "dependencies": {
@@ -41,10 +41,5 @@
     "vite-plugin-monaco-editor": "^1.1.0",
     "vite-tsconfig-paths": "^5.1.4",
     "vue-tsc": "^2.2.10"
-  },
-  "pnpm": {
-    "overrides": {
-      "monaco-editor": "^0.55.1"
-    }
   }
 }

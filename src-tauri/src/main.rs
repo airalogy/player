@@ -20,11 +20,18 @@ pub fn run() {
             commands::workspace::scan_workspace,
             commands::workspace::get_recent_workspaces,
             commands::workspace::set_last_opened_protocol,
+            commands::workspace::check_first_launch,
+            commands::workspace::open_example_workspace,
             commands::file::read_file,
             commands::file::write_file,
             commands::file::list_files,
             commands::file::create_directory,
             commands::file::delete_file,
+            commands::var_cards::list_var_cards,
+            commands::var_cards::get_var_card,
+            commands::var_cards::clone_var_card,
+            commands::var_cards::save_var_card,
+            commands::var_cards::delete_var_card,
         ])
         .setup(|_app| {
             log::info!("Airalogy Player setup complete");

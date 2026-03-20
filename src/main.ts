@@ -6,6 +6,7 @@ import App from "./App.vue"
 import router from "./router"
 import en from "./locales/en.json"
 import zh from "./locales/zh.json"
+import { useVarCardStore } from "./stores/varCards"
 import "./styles/main.css"
 
 const i18n = createI18n({
@@ -15,9 +16,13 @@ const i18n = createI18n({
   messages: { en, zh },
 })
 
+const pinia = createPinia()
 const app = createApp(App)
-app.use(createPinia())
+app.use(pinia)
 app.use(router)
 app.use(i18n)
 app.use(naive)
+
+void useVarCardStore(pinia).fetchCards()
+
 app.mount("#app")

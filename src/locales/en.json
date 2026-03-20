@@ -6,7 +6,8 @@
   "nav": {
     "welcome": "Welcome",
     "projects": "Projects",
-    "settings": "Settings"
+    "settings": "Settings",
+    "varCards": "Var Cards"
   },
   "welcome": {
     "title": "Welcome to Airalogy Player",
@@ -44,7 +45,66 @@
     "noProject": "No project selected. Open a project first.",
     "noFiles": "This project has no AIMD files yet.",
     "newFile": "New File",
-    "fileNamePlaceholder": "e.g. protocol.aimd"
+    "fileNamePlaceholder": "e.g. protocol.aimd",
+    "manageCards": "Manage Cards"
+  },
+  "varCards": {
+    "eyebrow": "Card Market",
+    "title": "Var Card Market",
+    "subtitle": "Browse reusable recorder cards, inspect live previews, and branch built-ins into your own card catalog.",
+    "searchPlaceholder": "Search cards, tags, or record types...",
+    "empty": "No cards match this filter yet",
+    "filters": {
+      "all": "All cards",
+      "builtin": "Built-in",
+      "user": "My cards"
+    },
+    "stats": {
+      "total": "cards available",
+      "builtin": "built-in cards",
+      "user": "user cards"
+    },
+    "badges": {
+      "builtin": "Built-in",
+      "user": "User",
+      "cloned": "Clone"
+    },
+    "actions": {
+      "preview": "Preview",
+      "clone": "Clone",
+      "clearSearch": "Clear search"
+    },
+    "heroPanel": {
+      "label": "Shared runtime",
+      "title": "Preview what Record will render",
+      "description": "The market is designed around live recorder previews so gallery thumbnails, detail previews, and future runtime rendering stay visually aligned.",
+      "tagPreview": "Live preview",
+      "tagClone": "Clone built-ins",
+      "tagRuntime": "Recorder-backed"
+    },
+    "preview": {
+      "emptyTitle": "Var Card Preview",
+      "emptyState": "Select a card to inspect its runtime preview."
+    },
+    "feedback": {
+      "cloneSuccess": "{title} cloned successfully",
+      "cloneLocalOnly": "{title} cloned locally for this session",
+      "studioUnavailable": "Card Studio is not available in this checkout yet."
+    },
+    "market": {
+      "title": "Var Card Market"
+    },
+    "studio": {
+      "title": "Card Studio",
+      "description": "Adjust metadata, field layout, behavior, and demo values without writing custom Vue code.",
+      "readOnlyDescription": "This built-in card is locked to preserve stable behavior. Clone it to create an editable user version.",
+      "readOnlyBanner": "Built-in cards are read-only. Use Clone to start a user-owned version before editing.",
+      "saved": "Card saved",
+      "cloned": "Card cloned",
+      "storeUnavailable": "Var card store is not available yet in this build.",
+      "cardNotFound": "That card could not be found.",
+      "cloneUnavailable": "This card cannot be cloned right now."
+    }
   },
   "settings": {
     "title": "Settings",
@@ -56,6 +116,7 @@
   "common": {
     "cancel": "Cancel",
     "confirm": "Confirm",
+    "clone": "Clone",
     "delete": "Delete",
     "edit": "Edit",
     "close": "Close",

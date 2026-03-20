@@ -42,4 +42,8 @@ export default defineConfig(async () => ({
   optimizeDeps: {
     include: ["monaco-editor"],
   },
+  build: {
+    // Monaco workers and editor assets are intentionally large in this desktop bundle.
+    chunkSizeWarningLimit: 7500,
+  },
 }))
