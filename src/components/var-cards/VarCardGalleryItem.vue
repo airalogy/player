@@ -129,7 +129,7 @@ function handlePrimaryAction() {
       </div>
     </div>
 
-    <div class="gallery-item__tags">
+    <div v-if="card.tags.length" class="gallery-item__tags">
       <span v-for="tag in card.tags" :key="tag" class="gallery-item__tag">{{ tag }}</span>
     </div>
 

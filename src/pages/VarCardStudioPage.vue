@@ -17,7 +17,7 @@ import VarCardLivePreviewPanel from "@/components/var-cards/studio/VarCardLivePr
 import { useVarCardStore } from "@/stores/varCards"
 import type { VarCardManifest } from "@/features/var-cards/types"
 
-type StudioStatus = "loading" | "ready" | "missing-store" | "missing-card"
+type StudioStatus = "loading" | "ready" | "missing-card"
 
 type VarCardRecord = VarCardManifest
 
@@ -346,7 +346,6 @@ async function loadCurrentCard() {
     draft.value = draftFromManifest(card)
     status.value = "ready"
   } catch (error) {
-    console.error("Failed to load var card studio state", error)
     status.value = "missing-card"
     message.error(String(error))
   }
@@ -429,12 +428,6 @@ onMounted(async () => {
     </div>
 
     <NEmpty
-      v-else-if="status === 'missing-store'"
-      class="center-state"
-      :description="t('varCards.studio.storeUnavailable')"
-    />
-
-    <NEmpty
       v-else-if="status === 'missing-card'"
       class="center-state"
       :description="t('varCards.studio.cardNotFound')"
@@ -502,12 +495,12 @@ onMounted(async () => {
 
 <style scoped>
 .var-card-studio-page {
-  min-height: 100vh;
+  min-height: 100%;
   padding: 24px;
 }
 
 .center-state {
-  min-height: calc(100vh - 48px);
+  min-height: calc(100% - 48px);
   display: flex;
   align-items: center;
   justify-content: center;

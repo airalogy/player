@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue"
+import { computed, onMounted, ref, watch } from "vue"
 import {
   NCard,
   NForm,
@@ -84,6 +84,9 @@ async function loadSshProfiles() {
       label: `${profile.id} (${profile.user || "user"}@${profile.hostname}:${profile.port})`,
       value: profile.id,
     }))
+  } catch {
+    sshProfiles.value = []
+    sshProfileOptions.value = []
   } finally {
     loadingSshProfiles.value = false
   }
@@ -103,8 +106,19 @@ function handleServiceProfileChange(value: string | null) {
 }
 
 onMounted(async () => {
-  await loadSshProfiles()
+  if (props.draft.layoutKind === 'service') {
+    await loadSshProfiles()
+  }
 })
+
+watch(
+  () => props.draft.layoutKind,
+  async (newKind) => {
+    if (newKind === 'service' && sshProfiles.value.length === 0 && !loadingSshProfiles.value) {
+      await loadSshProfiles()
+    }
+  },
+)
 </script>
 
 <template>
@@ -282,11 +296,11 @@ onMounted(async () => {
         />
       </NFormItem>
 
-      <NFormItem label="Enum Options">
+      <NFormItem v-if="draft.layoutKind === 'select'" label="Enum Options">
         <NInput
           type="textarea"
           :value="draft.enumOptionsText"
-          :disabled="readOnly || draft.layoutKind !== 'select'"
+          :disabled="readOnly"
           :autosize="{ minRows: 3, maxRows: 6 }"
           placeholder="low|Low&#10;medium|Medium&#10;high|High"
           @update:value="updateField('enumOptionsText', $event)"

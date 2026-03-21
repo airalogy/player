@@ -74,11 +74,9 @@ function handlePrimaryAction() {
 
       <div class="preview-dialog__canvas">
         <VarCardPreviewSurface
-          v-if="card"
           :manifest="card"
           :readonly="false"
           :locale="recorderLocale"
-          current-user-name="Dr. Lin"
         />
       </div>
     </div>
@@ -145,10 +143,6 @@ function handlePrimaryAction() {
   padding: 20px;
   max-height: min(70vh, 900px);
   overflow: auto;
-}
-
-.preview-dialog__recorder {
-  min-height: 420px;
 }
 
 @media (max-width: 768px) {

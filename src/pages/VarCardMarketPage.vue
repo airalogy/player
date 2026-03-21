@@ -164,7 +164,7 @@ function editCard(card: VarCardGalleryCard) {
         :description="t('varCards.empty')"
         class="market-state"
       >
-        <template #extra>
+        <template v-if="searchQuery" #extra>
           <NButton quaternary @click="searchQuery = ''">{{ t("varCards.actions.clearSearch") }}</NButton>
         </template>
       </NEmpty>
