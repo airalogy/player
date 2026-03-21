@@ -2,7 +2,7 @@
 import { ref, computed, onMounted, watch } from "vue"
 import { useRouter, useRoute } from "vue-router"
 import { useI18n } from "vue-i18n"
-import { NButton, NSpace, NSelect, NSpin, NEmpty } from "naive-ui"
+import { NButton, NSpace, NSelect, NSpin, NEmpty, NDrawer, NDrawerContent } from "naive-ui"
 import { AimdRecorder, createEmptyProtocolRecordData } from "@airalogy/aimd-recorder"
 import "@airalogy/aimd-recorder/styles"
 import type { AimdProtocolRecordData } from "@airalogy/aimd-recorder"
@@ -12,6 +12,7 @@ import { useProtocolNavigator } from "@/composables/useProtocolNavigator"
 import { useVarCardRecorder } from "@/composables/useVarCardRecorder"
 import { convertFileSrc, invoke } from "@tauri-apps/api/core"
 import { dirname } from "@tauri-apps/api/path"
+import { useMediaQuery } from "@vueuse/core"
 
 const router = useRouter()
 const route = useRoute()
@@ -29,6 +30,8 @@ const currentFileDirectory = ref<string | null>(null)
 const scrollContainerRef = ref<HTMLElement | null>(null)
 const protocolDocumentRef = ref<HTMLElement | null>(null)
 const { typePlugins: recorderTypePlugins } = useVarCardRecorder()
+const isMobile = useMediaQuery("(max-width: 768px)")
+const tocDrawerOpen = ref(false)
 
 const protocolId = computed(() => route.query.id as string | undefined)
 
@@ -242,7 +245,25 @@ watch(protocolId, (newId, oldId) => { if (newId !== oldId) load() })
             />
           </template>
         </NSpace>
-        <NButton @click="openEditor">{{ t("editor.title") }}</NButton>
+        <NSpace align="center" :size="8">
+          <NButton
+            v-if="isMobile && anchors.length > 0"
+            quaternary
+            circle
+            aria-label="Table of Contents"
+            @click="tocDrawerOpen = true"
+          >
+            <template #icon>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none"
+                   stroke="currentColor" stroke-width="2" stroke-linecap="round">
+                <line x1="3" y1="6" x2="21" y2="6"/>
+                <line x1="3" y1="12" x2="15" y2="12"/>
+                <line x1="3" y1="18" x2="18" y2="18"/>
+              </svg>
+            </template>
+          </NButton>
+          <NButton @click="openEditor">{{ t("editor.title") }}</NButton>
+        </NSpace>
       </header>
 
       <main ref="scrollContainerRef" class="protocol-content">
@@ -257,7 +278,7 @@ watch(protocolId, (newId, oldId) => { if (newId !== oldId) load() })
             />
           </div>
           <ProtocolNavigatorRail
-            v-if="anchors.length > 0"
+            v-if="anchors.length > 0 && !isMobile"
             class="protocol-navigator"
             :anchors="anchors"
             :active-anchor-id="activeAnchorId"
@@ -268,6 +289,38 @@ watch(protocolId, (newId, oldId) => { if (newId !== oldId) load() })
           />
         </div>
       </main>
+
+      <NDrawer
+        v-model:show="tocDrawerOpen"
+        placement="bottom"
+        :height="400"
+        :trap-focus="true"
+        :close-on-esc="true"
+      >
+        <NDrawerContent title="Table of Contents" :native-scrollbar="false">
+          <div class="toc-sheet">
+            <button
+              v-for="anchor in anchors"
+              :key="'toc-' + anchor.id"
+              class="toc-sheet__item"
+              :class="[
+                `toc-sheet__item--level-${anchor.level}`,
+                { 'toc-sheet__item--active': anchor.id === activeAnchorId },
+              ]"
+              type="button"
+              @click="scrollToAnchor(anchor.id); tocDrawerOpen = false"
+            >
+              <span
+                v-if="anchor.status !== 'default'"
+                class="toc-sheet__status"
+                :class="`toc-sheet__status--${anchor.status}`"
+              />
+              <span class="toc-sheet__text">{{ anchor.title }}</span>
+              <span class="toc-sheet__kind">{{ anchor.kind }}</span>
+            </button>
+          </div>
+        </NDrawerContent>
+      </NDrawer>
     </template>
   </div>
 </template>
@@ -316,7 +369,7 @@ watch(protocolId, (newId, oldId) => { if (newId !== oldId) load() })
 .protocol-layout {
   min-height: 100%;
   display: grid;
-  grid-template-columns: minmax(0, 1040px) 34px;
+  grid-template-columns: minmax(0, 1040px) auto;
   justify-content: center;
   align-items: start;
   column-gap: 14px;
@@ -332,7 +385,7 @@ watch(protocolId, (newId, oldId) => { if (newId !== oldId) load() })
   align-self: start;
 }
 
-@media (max-width: 1024px) {
+@media (max-width: 768px) {
   .protocol-layout {
     grid-template-columns: minmax(0, 1fr);
   }
@@ -340,5 +393,69 @@ watch(protocolId, (newId, oldId) => { if (newId !== oldId) load() })
   .protocol-navigator {
     display: none;
   }
+}
+
+/* ── Bottom sheet TOC ── */
+
+.toc-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.toc-sheet__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 12px;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  border-radius: 8px;
+  text-align: left;
+  font-size: 14px;
+  line-height: 1.4;
+  color: var(--aimd-text-primary);
+  transition: background-color 120ms ease;
+}
+
+.toc-sheet__item:hover,
+.toc-sheet__item:focus-visible {
+  background: rgba(26, 115, 232, 0.06);
+  outline: none;
+}
+
+.toc-sheet__item--active {
+  color: var(--aimd-color-primary);
+  font-weight: 600;
+}
+
+.toc-sheet__item--level-2 { padding-left: 24px; }
+.toc-sheet__item--level-3 { padding-left: 40px; }
+
+.toc-sheet__status {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.toc-sheet__status--completed { background: #2f7d32; }
+.toc-sheet__status--warning   { background: #b26a00; }
+.toc-sheet__status--error     { background: #b42318; }
+
+.toc-sheet__text {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.toc-sheet__kind {
+  font-size: 11px;
+  color: var(--aimd-text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  flex-shrink: 0;
 }
 </style>

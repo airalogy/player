@@ -25,6 +25,20 @@ Match the existing style. Vue and TypeScript files use 2-space indentation and d
 
 There is no dedicated automated test suite configured yet. Before opening a PR, run `pnpm type-check`, `pnpm build`, and validate the target flow in `pnpm tauri:dev`. For backend changes, exercise the related Tauri command from the UI. For editor or protocol work, test with representative sample files rather than empty-state smoke checks only.
 
+## AIMD Integration Workflow
+
+`player` consumes the local `aimd` workspace directly. When you need to verify the combined effect of multiple AIMD PRs, do not recreate those fixes in `player`. Instead:
+
+1. Aggregate the desired AIMD fixes on a local branch in `../aimd` such as `local/player-integration`.
+2. Validate the relevant `aimd` packages on that branch.
+3. Restart `pnpm tauri:dev` in `player` and test against that local integrated AIMD codebase.
+
+If `player` dependency installation is affected by the root workspace layout, use:
+
+```bash
+pnpm install --ignore-workspace --force
+```
+
 ## Commit & Pull Request Guidelines
 
 Recent history mixes plain subjects with conventional prefixes, but `feat:`, `fix:`, `chore:`, and `init:` are the clearest pattern to follow. Keep commit messages short and imperative, for example `feat: add protocol navigator filters`. PRs should describe the user-visible change, list validation commands, link the relevant issue, and include screenshots for UI updates.

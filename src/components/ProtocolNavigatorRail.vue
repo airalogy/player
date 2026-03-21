@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed } from "vue"
+import { ref, onBeforeUnmount } from "vue"
 import type { ProtocolAnchor } from "@/composables/useProtocolNavigator"
 
 const props = defineProps<{
@@ -14,214 +14,244 @@ const emit = defineEmits<{
   (e: "anchor-leave"): void
 }>()
 
-const activeAnchor = computed(() =>
-  props.anchors.find((anchor) => anchor.id === props.activeAnchorId) ?? null,
-)
+const isExpanded = ref(false)
+let collapseTimer: ReturnType<typeof setTimeout> | null = null
 
-const hoveredAnchor = computed(() =>
-  props.anchors.find((anchor) => anchor.id === props.hoveredAnchorId) ?? null,
-)
+function handleMouseEnter() {
+  if (collapseTimer) {
+    clearTimeout(collapseTimer)
+    collapseTimer = null
+  }
+  isExpanded.value = true
+}
 
-function anchorStyle(anchor: ProtocolAnchor): Record<string, string> {
-  return {
-    top: `${(anchor.topRatio * 100).toFixed(3)}%`,
+function handleMouseLeave() {
+  collapseTimer = setTimeout(() => {
+    isExpanded.value = false
+  }, 150)
+}
+
+function handleItemClick(anchorId: string) {
+  emit("anchor-click", anchorId)
+  isExpanded.value = false
+}
+
+function handleKeydown(event: KeyboardEvent, anchorId: string) {
+  if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault()
+    handleItemClick(anchorId)
   }
 }
 
-function previewStyle(anchor: ProtocolAnchor): Record<string, string> {
-  const top = `${(anchor.topRatio * 100).toFixed(3)}%`
-  return {
-    top: `clamp(44px, ${top}, calc(100% - 44px))`,
-  }
+function indentStyle(anchor: ProtocolAnchor): Record<string, string> {
+  return { paddingLeft: `${(anchor.level - 1) * 12}px` }
 }
 
 function kindLabel(anchor: ProtocolAnchor): string {
   switch (anchor.kind) {
-    case "section":
-      return anchor.level <= 1 ? "Section" : "Subsection"
-    case "step":
-      return "Step"
-    case "check":
-      return "Check"
-    case "table":
-      return "Table"
-    case "quiz":
-      return "Quiz"
-    case "callout":
-      return "Callout"
-    default:
-      return "Anchor"
+    case "section": return anchor.level <= 1 ? "Section" : "Subsection"
+    case "step": return "Step"
+    case "check": return "Check"
+    case "table": return "Table"
+    case "quiz": return "Quiz"
+    case "callout": return "Callout"
+    default: return "Anchor"
   }
 }
+
+onBeforeUnmount(() => {
+  if (collapseTimer) clearTimeout(collapseTimer)
+})
 </script>
 
 <template>
-  <aside class="protocol-navigator-rail" aria-label="Protocol Navigator">
-    <div class="protocol-navigator-rail__track">
+  <nav
+    class="pnav"
+    :class="{ 'pnav--expanded': isExpanded }"
+    aria-label="Protocol Navigator"
+    @mouseenter="handleMouseEnter"
+    @mouseleave="handleMouseLeave"
+  >
+    <!-- Collapsed: dot indicators -->
+    <div v-show="!isExpanded" class="pnav__dots">
       <button
         v-for="anchor in anchors"
-        :key="anchor.id"
-        class="protocol-navigator-rail__tick"
+        :key="'dot-' + anchor.id"
+        class="pnav__dot"
         :class="[
-          `protocol-navigator-rail__tick--${anchor.kind}`,
-          `protocol-navigator-rail__tick--level-${anchor.level}`,
-          `protocol-navigator-rail__tick--status-${anchor.status}`,
-          { 'is-active': anchor.id === activeAnchorId },
+          `pnav__dot--${anchor.kind}`,
+          `pnav__dot--status-${anchor.status}`,
+          { 'pnav__dot--active': anchor.id === activeAnchorId },
         ]"
-        :style="anchorStyle(anchor)"
         type="button"
         :aria-label="`${kindLabel(anchor)}: ${anchor.title}`"
-        :title="`${kindLabel(anchor)}: ${anchor.title}`"
-        @click="emit('anchor-click', anchor.id)"
+        @click="handleItemClick(anchor.id)"
+        @focus="handleMouseEnter"
+      />
+    </div>
+
+    <!-- Expanded: full text outline -->
+    <div v-show="isExpanded" class="pnav__outline" role="list">
+      <button
+        v-for="anchor in anchors"
+        :key="'item-' + anchor.id"
+        class="pnav__item"
+        :class="[
+          `pnav__item--${anchor.kind}`,
+          `pnav__item--status-${anchor.status}`,
+          { 'pnav__item--active': anchor.id === activeAnchorId },
+        ]"
+        :style="indentStyle(anchor)"
+        type="button"
+        role="listitem"
+        tabindex="0"
+        @click="handleItemClick(anchor.id)"
         @mouseenter="emit('anchor-hover', anchor.id)"
         @mouseleave="emit('anchor-leave')"
         @focus="emit('anchor-hover', anchor.id)"
         @blur="emit('anchor-leave')"
-      />
-
-      <div
-        v-if="activeAnchor"
-        class="protocol-navigator-rail__active-marker"
-        :style="anchorStyle(activeAnchor)"
-      />
+        @keydown="handleKeydown($event, anchor.id)"
+      >
+        <span
+          v-if="anchor.status !== 'default'"
+          class="pnav__status-dot"
+          :class="`pnav__status-dot--${anchor.status}`"
+        />
+        <span class="pnav__item-title">{{ anchor.title }}</span>
+      </button>
     </div>
-
-    <div
-      v-if="hoveredAnchor"
-      class="protocol-navigator-rail__preview"
-      :style="previewStyle(hoveredAnchor)"
-    >
-      <p class="protocol-navigator-rail__preview-kind">
-        {{ kindLabel(hoveredAnchor) }}
-      </p>
-      <p class="protocol-navigator-rail__preview-title">
-        {{ hoveredAnchor.title }}
-      </p>
-      <p v-if="hoveredAnchor.summary" class="protocol-navigator-rail__preview-summary">
-        {{ hoveredAnchor.summary }}
-      </p>
-    </div>
-  </aside>
+  </nav>
 </template>
 
 <style scoped>
-.protocol-navigator-rail {
-  width: 34px;
-  position: relative;
-  display: flex;
-  justify-content: center;
-  user-select: none;
+.pnav {
+  width: 20px;
   overflow: visible;
+  user-select: none;
+  transition: width 200ms ease;
 }
 
-.protocol-navigator-rail__track {
-  width: 18px;
-  height: min(76vh, 620px);
-  border-radius: 12px;
-  background: linear-gradient(180deg, #f0f4f8 0%, #e6edf3 100%);
-  border: 1px solid #d6e0ea;
-  position: relative;
+.pnav--expanded {
+  width: 220px;
 }
 
-.protocol-navigator-rail__tick {
-  position: absolute;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 11px;
-  height: 2px;
+/* ── Collapsed dots ── */
+
+.pnav__dots {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding-top: 4px;
+}
+
+.pnav__dot {
+  width: 4px;
+  height: 4px;
   border: 0;
-  border-radius: 999px;
-  background: #6f7f8f;
+  border-radius: 50%;
+  background: var(--aimd-text-secondary);
+  opacity: 0.35;
   cursor: pointer;
-  opacity: 0.65;
-  transition: opacity 120ms ease, transform 120ms ease, background-color 120ms ease;
+  padding: 0;
+  transition: opacity 120ms ease, transform 120ms ease;
 }
 
-.protocol-navigator-rail__tick:hover,
-.protocol-navigator-rail__tick:focus-visible {
-  opacity: 0.95;
-  transform: translate(-50%, -50%) scaleX(1.08);
+.pnav__dot:hover,
+.pnav__dot:focus-visible {
+  opacity: 0.8;
+  transform: scale(1.4);
   outline: none;
 }
 
-.protocol-navigator-rail__tick--section {
-  width: 13px;
+.pnav__dot--section {
+  width: 5px;
+  height: 5px;
 }
 
-.protocol-navigator-rail__tick--step {
-  width: 10px;
+.pnav__dot--active {
+  background: var(--aimd-color-primary);
+  opacity: 1;
+  width: 6px;
+  height: 6px;
 }
 
-.protocol-navigator-rail__tick--check,
-.protocol-navigator-rail__tick--table,
-.protocol-navigator-rail__tick--callout,
-.protocol-navigator-rail__tick--quiz {
-  width: 7px;
-}
+.pnav__dot--status-completed { background: #2f7d32; opacity: 0.7; }
+.pnav__dot--status-warning   { background: #b26a00; opacity: 0.7; }
+.pnav__dot--status-error     { background: #b42318; opacity: 0.7; }
 
-.protocol-navigator-rail__tick--status-completed {
-  background: #2f7d32;
-}
-
-.protocol-navigator-rail__tick--status-warning {
-  background: #b26a00;
-}
-
-.protocol-navigator-rail__tick--status-error {
-  background: #b42318;
-}
-
-.protocol-navigator-rail__tick.is-active {
+/* Active overrides status */
+.pnav__dot--active.pnav__dot--status-completed,
+.pnav__dot--active.pnav__dot--status-warning,
+.pnav__dot--active.pnav__dot--status-error {
   opacity: 1;
 }
 
-.protocol-navigator-rail__active-marker {
-  position: absolute;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  width: 16px;
-  height: 6px;
-  border-radius: 999px;
-  background: #1f3f63;
-  box-shadow: 0 0 0 2px rgba(31, 63, 99, 0.16);
-  pointer-events: none;
+/* ── Expanded outline ── */
+
+.pnav__outline {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
 }
 
-.protocol-navigator-rail__preview {
-  position: absolute;
-  left: calc(100% + 12px);
-  transform: translateY(-50%);
-  width: 210px;
-  padding: 8px 10px;
-  border-radius: 10px;
-  border: 1px solid #d8e1ea;
-  background: #fbfdff;
-  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.09);
-  pointer-events: none;
-  z-index: 2;
-}
-
-.protocol-navigator-rail__preview-kind {
-  font-size: 11px;
-  line-height: 1.2;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: #4f657a;
-  margin: 0;
-}
-
-.protocol-navigator-rail__preview-title {
-  margin: 4px 0 0;
+.pnav__item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  padding: 4px 8px;
+  border-radius: 6px;
+  text-align: left;
   font-size: 12px;
   line-height: 1.4;
-  color: #162236;
+  color: var(--aimd-text-secondary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  transition: background-color 120ms ease, color 120ms ease;
+}
+
+.pnav__item:hover,
+.pnav__item:focus-visible {
+  background: rgba(26, 115, 232, 0.06);
+  color: var(--aimd-text-primary);
+  outline: none;
+}
+
+.pnav__item--active {
+  color: var(--aimd-color-primary);
   font-weight: 600;
 }
 
-.protocol-navigator-rail__preview-summary {
-  margin: 5px 0 0;
-  font-size: 11px;
-  line-height: 1.45;
-  color: #43576a;
+.pnav__item--section {
+  font-weight: 500;
+  font-size: 12.5px;
+  color: var(--aimd-text-primary);
 }
+
+.pnav__item--active.pnav__item--section {
+  font-weight: 600;
+  color: var(--aimd-color-primary);
+}
+
+.pnav__item-title {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Status dots ── */
+
+.pnav__status-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.pnav__status-dot--completed { background: #2f7d32; }
+.pnav__status-dot--warning   { background: #b26a00; }
+.pnav__status-dot--error     { background: #b42318; }
 </style>
