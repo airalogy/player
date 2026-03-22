@@ -1,64 +1,65 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue"
-import { useRouter } from "vue-router"
+import { onMounted } from "vue"
 import { useI18n } from "vue-i18n"
-import { NButton, NSpace, NEmpty, NSpin } from "naive-ui"
+import { NButton, NSpace, NEmpty, NSpin, useMessage } from "naive-ui"
 import { open } from "@tauri-apps/plugin-dialog"
-import { invoke } from "@tauri-apps/api/core"
-import { useWorkspaceStore } from "@/stores/workspace"
-import type { RecentWorkspace } from "@/stores/workspace"
+import { useWelcomeWorkspace } from "@/shared/features/workspace/useWelcomeWorkspace"
+import type { RecentWorkspace } from "@/shared/domain/workspace/workspaceTypes"
 
-const router = useRouter()
 const { t } = useI18n()
-const workspaceStore = useWorkspaceStore()
-
-const recentWorkspaces = ref<RecentWorkspace[]>([])
-const loading = ref(true)
+const message = useMessage()
+const {
+  loading,
+  recentWorkspaces,
+  initialize,
+  openWorkspace,
+  openRecentWorkspace,
+  removeRecentWorkspace,
+} = useWelcomeWorkspace()
 
 onMounted(async () => {
-  await workspaceStore.fetchRecentWorkspaces()
-  recentWorkspaces.value = workspaceStore.recentWorkspaces.slice(0, 6)
-  loading.value = false
-
-  const isFirst = await invoke<boolean>("check_first_launch")
-  if (isFirst && recentWorkspaces.value.length === 0) {
-    await openExampleWorkspace()
-  }
-})
-
-async function openExampleWorkspace() {
   try {
-    const ws = await invoke("open_example_workspace")
-    if (ws) {
-      await workspaceStore.fetchRecentWorkspaces()
-      router.push("/projects")
-    }
+    await initialize()
   } catch (e) {
     console.error("Failed to open example workspace:", e)
   }
-}
+})
 
 async function openWorkspaceDialog() {
   const selected = await open({ directory: true, multiple: false })
   if (!selected) return
   const path = typeof selected === "string" ? selected : selected[0]
-  const ws = await workspaceStore.openWorkspace(path)
-  if (ws) router.push("/projects")
+  await openWorkspace(path)
 }
 
 async function openRecent(ws: RecentWorkspace) {
-  const info = await workspaceStore.openWorkspace(ws.path)
-  if (info) router.push("/projects")
+  message.info(`Opening recent workspace: ${ws.name}`)
+  const info = await openRecentWorkspace(ws.path)
+  if (!info) {
+    message.error(`Failed to open recent workspace: ${ws.path}`)
+  }
 }
 
 async function removeRecent(event: Event, ws: RecentWorkspace) {
   event.stopPropagation()
-  await workspaceStore.removeRecentWorkspace(ws.path)
-  recentWorkspaces.value = recentWorkspaces.value.filter((w) => w.path !== ws.path)
+  await removeRecentWorkspace(ws.path)
 }
 
 function formatDate(timestamp: number): string {
   return new Date(timestamp * 1000).toLocaleDateString()
+}
+
+function handleRecentActivate(event: Event, ws: RecentWorkspace) {
+  event.preventDefault()
+  event.stopPropagation()
+  void openRecent(ws)
+}
+
+function handleRecentKeydown(event: KeyboardEvent, ws: RecentWorkspace) {
+  if (event.key === "Enter" || event.key === " ") {
+    event.preventDefault()
+    void openRecent(ws)
+  }
 }
 </script>
 
@@ -78,12 +79,20 @@ function formatDate(timestamp: number): string {
 
       <section class="recent-files">
         <h2 class="section-title">{{ t("welcome.recentFiles") }}</h2>
-        <div v-if="recentWorkspaces.length > 0" class="recent-grid">
+        <div v-if="loading" class="recent-loading">
+          <NSpin size="large" />
+        </div>
+        <div v-else-if="recentWorkspaces.length > 0" class="recent-grid">
           <div
             v-for="ws in recentWorkspaces"
             :key="ws.path"
             class="recent-card"
-            @click="openRecent(ws)"
+            role="button"
+            tabindex="0"
+            @click="handleRecentActivate($event, ws)"
+            @pointerup="handleRecentActivate($event, ws)"
+            @touchend="handleRecentActivate($event, ws)"
+            @keydown="handleRecentKeydown($event, ws)"
           >
             <div class="recent-card-icon">
               <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
@@ -163,6 +172,12 @@ function formatDate(timestamp: number): string {
   margin-top: 48px;
 }
 
+.recent-loading {
+  display: flex;
+  justify-content: center;
+  padding: 24px 0;
+}
+
 .recent-grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
@@ -178,12 +193,20 @@ function formatDate(timestamp: number): string {
   border: 1px solid var(--aimd-border-color);
   border-radius: 8px;
   cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  user-select: none;
   transition: all 0.2s ease;
 }
 
 .recent-card:hover {
   border-color: var(--aimd-color-primary);
   box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.recent-card:focus-visible {
+  outline: 2px solid var(--aimd-color-primary);
+  outline-offset: 2px;
 }
 
 .recent-card-icon {

@@ -1,4 +1,4 @@
-import type { ProtocolEntry } from "@/stores/workspace"
+import type { ProtocolEntry } from "@/shared/domain/workspace/workspaceTypes"
 
 export function isAbsoluteFilesystemPath(path: string): boolean {
   return path.startsWith("/") || path.startsWith("\\\\") || /^[A-Za-z]:[\\/]/.test(path)
