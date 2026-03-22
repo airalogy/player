@@ -9,8 +9,7 @@ import { useWorkspaceStore } from "@/stores/workspace"
 import { useEditorStore } from "@/stores/editor"
 import { createEditorVarTypePresets } from "@/features/var-cards/runtime/createEditorVarTypePresets"
 import { useVarCardStore } from "@/stores/varCards"
-import { invoke } from "@tauri-apps/api/core"
-import { resolveProtocolFilePath, resolveWorkspacePath } from "@/utils/workspacePaths"
+import { useEditorSession } from "@/shared/features/editor/useEditorSession"
 
 const router = useRouter()
 const route = useRoute()
@@ -24,15 +23,8 @@ const { cards: varCards } = storeToRefs(varCardStore)
 
 type Status = "loading" | "no-protocol" | "no-files" | "ready" | "error"
 
-const status = ref<Status>("loading")
-const files = ref<string[]>([])
-const selectedFile = ref<string | null>(null)
-const fileContent = ref("")
-const saving = ref(false)
 const showNewFileModal = ref(false)
 const newFileName = ref("")
-const creatingFile = ref(false)
-const errorMessage = ref("")
 
 const protocolId = computed(() => route.query.id as string | undefined)
 
@@ -40,106 +32,49 @@ const protocol = computed(() =>
   workspaceStore.current?.protocols.find((p) => p.id === protocolId.value) ?? null
 )
 
-const fileSelectOptions = computed(() =>
-  files.value.map((f) => ({ label: f, value: f }))
-)
 const varTypePresets = computed<AimdVarTypePresetOption[]>(() =>
   createEditorVarTypePresets(varCards.value),
 )
+const editorSession = useEditorSession({
+  workspacePath: computed(() => workspaceStore.current?.path),
+  protocol,
+  editorStore,
+  onError: (value) => {
+    message.error(value)
+  },
+})
 
-async function load() {
-  if (!protocol.value) {
-    status.value = "no-protocol"
-    return
-  }
-
-  status.value = "loading"
-  errorMessage.value = ""
-
-  try {
-    if (protocol.value.type === "file") {
-      const path = resolveProtocolFilePath(workspaceStore.current?.path, protocol.value)
-      const content = await invoke<string>("read_file", { path })
-      fileContent.value = content
-      editorStore.loadContent(content, path)
-      files.value = [protocol.value.path.split(/[\\/]/).pop()!]
-      selectedFile.value = files.value[0]
-      status.value = "ready"
-      return
-    }
-
-    const entries: { name: string; is_dir: boolean }[] = await invoke("list_files", {
-      dir: resolveWorkspacePath(workspaceStore.current?.path, protocol.value.path),
-    })
-    files.value = entries.filter((f) => !f.is_dir && f.name.endsWith(".aimd")).map((f) => f.name)
-
-    if (files.value.length === 0) {
-      status.value = "no-files"
-      return
-    }
-
-    await openFile(files.value[0])
-    status.value = "ready"
-  } catch (error) {
-    errorMessage.value = String(error)
-    status.value = "error"
-    message.error(errorMessage.value)
-  }
-}
-
-async function openFile(filename: string) {
-  if (!protocol.value) return
-  const path = resolveProtocolFilePath(workspaceStore.current?.path, protocol.value, filename)
-  const content = await invoke<string>("read_file", { path })
-  fileContent.value = content
-  editorStore.loadContent(content, path)
-  selectedFile.value = filename
-}
+const status = computed<Status>(() => editorSession.status.value)
+const files = computed(() => editorSession.files.value)
+const selectedFile = computed(() => editorSession.selectedFile.value)
+const fileContent = computed(() => editorSession.fileContent.value)
+const saving = computed(() => editorSession.saving.value)
+const creatingFile = computed(() => editorSession.creatingFile.value)
+const errorMessage = computed(() => editorSession.errorMessage.value)
+const fileSelectOptions = computed(() => editorSession.fileSelectOptions.value)
 
 async function handleFileSwitch(filename: string) {
-  if (filename === selectedFile.value) return
-  if (editorStore.isDirty) await save()
-  await openFile(filename)
+  await editorSession.handleFileSwitch(filename)
 }
 
 async function save() {
-  if (!editorStore.filePath) return
-  saving.value = true
-  try {
-    await invoke("write_file", { path: editorStore.filePath, content: fileContent.value })
-    editorStore.markClean()
+  const saved = await editorSession.save()
+  if (saved) {
     message.success(t("editor.saved"))
-  } catch (e) {
+  } else {
     message.error(t("editor.saveFailed"))
-  } finally {
-    saving.value = false
   }
 }
 
 async function createNewFile() {
-  let name = newFileName.value.trim()
-  if (!name || !protocol.value || protocol.value.type === "file") return
-  if (!name.endsWith(".aimd")) name += ".aimd"
-
-  creatingFile.value = true
-  try {
-    const path = resolveProtocolFilePath(workspaceStore.current?.path, protocol.value, name)
-    await invoke("write_file", { path, content: `# ${name.replace(".aimd", "")}\n\n` })
-    files.value.push(name)
-    showNewFileModal.value = false
-    newFileName.value = ""
-    await openFile(name)
-    status.value = "ready"
-  } catch (e) {
-    message.error(String(e))
-  } finally {
-    creatingFile.value = false
-  }
+  const created = await editorSession.createNewFile(newFileName.value)
+  if (!created) return
+  showNewFileModal.value = false
+  newFileName.value = ""
 }
 
 function handleContentChange(val: string) {
-  fileContent.value = val
-  editorStore.setContent(val)
+  editorSession.handleContentChange(val)
 }
 
 function goBack() {
@@ -158,9 +93,13 @@ function openCardStudio() {
 }
 
 onMounted(async () => {
-  await Promise.all([load(), varCardStore.fetchCards()])
+  await Promise.all([editorSession.load(), varCardStore.fetchCards()])
 })
-watch(protocolId, (newId, oldId) => { if (newId !== oldId) load() })
+watch(protocolId, (newId, oldId) => {
+  if (newId !== oldId) {
+    void editorSession.load()
+  }
+})
 </script>
 
 <template>
@@ -196,7 +135,7 @@ watch(protocolId, (newId, oldId) => { if (newId !== oldId) load() })
             <NButton @click="goBack">
               {{ t("nav.projects") }}
             </NButton>
-            <NButton type="primary" @click="load">
+            <NButton type="primary" @click="editorSession.load">
               Retry
             </NButton>
           </NSpace>

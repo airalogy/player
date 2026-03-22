@@ -3,17 +3,15 @@ import { ref, computed, onMounted, watch } from "vue"
 import { useRouter, useRoute } from "vue-router"
 import { useI18n } from "vue-i18n"
 import { NButton, NSpace, NSelect, NSpin, NEmpty, NDrawer, NDrawerContent, useMessage } from "naive-ui"
-import { AimdRecorder, createEmptyProtocolRecordData } from "@airalogy/aimd-recorder"
+import { AimdRecorder } from "@airalogy/aimd-recorder"
 import "@airalogy/aimd-recorder/styles"
-import type { AimdProtocolRecordData } from "@airalogy/aimd-recorder"
 import { useWorkspaceStore } from "@/stores/workspace"
 import ProtocolNavigatorRail from "@/components/ProtocolNavigatorRail.vue"
 import { useProtocolNavigator } from "@/composables/useProtocolNavigator"
 import { useVarCardRecorder } from "@/composables/useVarCardRecorder"
-import { convertFileSrc, invoke } from "@tauri-apps/api/core"
-import { dirname } from "@tauri-apps/api/path"
 import { useMediaQuery } from "@vueuse/core"
-import { isAbsoluteFilesystemPath, resolveProtocolFilePath, resolveWorkspacePath } from "@/utils/workspacePaths"
+import { useProtocolStepLiveActivity } from "@/composables/useProtocolStepLiveActivity"
+import { useProtocolSession } from "@/shared/features/protocol/useProtocolSession"
 
 const router = useRouter()
 const route = useRoute()
@@ -23,13 +21,6 @@ const workspaceStore = useWorkspaceStore()
 
 type Status = "loading" | "no-workspace" | "no-protocol" | "no-files" | "ready" | "error"
 
-const status = ref<Status>("loading")
-const files = ref<string[]>([])
-const selectedFile = ref<string | null>(null)
-const content = ref("")
-const record = ref<AimdProtocolRecordData>(createEmptyProtocolRecordData())
-const currentFileDirectory = ref<string | null>(null)
-const errorMessage = ref("")
 const scrollContainerRef = ref<HTMLElement | null>(null)
 const protocolDocumentRef = ref<HTMLElement | null>(null)
 const { typePlugins: recorderTypePlugins } = useVarCardRecorder()
@@ -42,75 +33,40 @@ const protocol = computed(() =>
   workspaceStore.current?.protocols.find((p) => p.id === protocolId.value) ?? null
 )
 
-const fileSelectOptions = computed(() =>
-  files.value.map((f) => ({ label: f, value: f }))
-)
+const protocolSession = useProtocolSession({
+  workspacePath: computed(() => workspaceStore.current?.path),
+  protocol,
+  onLoadStart: (id) => {
+    message.info(`Protocol load start: ${String(id ?? "missing")}`)
+  },
+  onNoWorkspace: () => {
+    message.warning("Protocol load aborted: no workspace")
+  },
+  onNoProtocol: (id) => {
+    message.warning(`Protocol not found for id: ${String(id ?? "missing")}`)
+  },
+  onReady: (id) => {
+    message.success(`Protocol ready: ${id}`)
+  },
+  onError: (value) => {
+    message.error(value)
+  },
+})
 
-function isExternalResource(path: string): boolean {
-  if (isAbsoluteFilesystemPath(path)) {
-    return false
-  }
+const status = computed<Status>(() => protocolSession.status.value)
+const files = computed(() => protocolSession.files.value)
+const selectedFile = computed(() => protocolSession.selectedFile.value)
+const fileSelectOptions = computed(() => protocolSession.fileSelectOptions.value)
+const content = computed(() => protocolSession.content.value)
+const record = computed({
+  get: () => protocolSession.record.value,
+  set: (value) => {
+    protocolSession.record.value = value
+  },
+})
+const errorMessage = computed(() => protocolSession.errorMessage.value)
 
-  return /^(?:[a-z][a-z0-9+.-]*:|\/\/|#)/i.test(path)
-}
-
-function toFileUrl(path: string): string {
-  const normalized = path.replace(/\\/g, "/")
-
-  if (/^[A-Za-z]:\//.test(normalized)) {
-    return `file:///${encodeURI(normalized)}`
-  }
-
-  if (normalized.startsWith("//")) {
-    return `file:${encodeURI(normalized)}`
-  }
-
-  if (normalized.startsWith("/")) {
-    return `file://${encodeURI(normalized)}`
-  }
-
-  return `file:///${encodeURI(normalized)}`
-}
-
-function resolveRelativeFilesystemPath(baseDir: string, relativePath: string): string {
-  const preferBackslash = baseDir.includes("\\")
-  const separator = preferBackslash ? "\\" : "/"
-  const baseUrl = new URL(
-    `${toFileUrl(baseDir).replace(/[\\/]+$/, "")}/`,
-  )
-  const resolvedUrl = new URL(relativePath.replace(/\\/g, "/"), baseUrl)
-  const decodedPath = decodeURIComponent(resolvedUrl.pathname)
-
-  if (/^\/[A-Za-z]:\//.test(decodedPath)) {
-    const windowsPath = decodedPath.slice(1)
-    return preferBackslash ? windowsPath.replace(/\//g, "\\") : windowsPath
-  }
-
-  return preferBackslash ? decodedPath.replace(/\//g, separator) : decodedPath
-}
-
-function resolveWorkspaceAsset(src: string): string | null {
-  const trimmed = src.trim()
-  if (!trimmed) {
-    return null
-  }
-
-  if (isExternalResource(trimmed)) {
-    return trimmed
-  }
-
-  if (isAbsoluteFilesystemPath(trimmed)) {
-    return convertFileSrc(trimmed)
-  }
-
-  if (!currentFileDirectory.value) {
-    return trimmed
-  }
-
-  return convertFileSrc(resolveRelativeFilesystemPath(currentFileDirectory.value, trimmed))
-}
-
-const navigatorEnabled = computed(() => status.value === "ready")
+const navigatorEnabled = computed(() => protocolSession.status.value === "ready")
 const {
   anchors,
   activeAnchorId,
@@ -125,58 +81,17 @@ const {
   enabled: navigatorEnabled,
 })
 
-async function load() {
-  if (!workspaceStore.current) {
-    status.value = "no-workspace"
-    return
-  }
-  if (!protocol.value) {
-    status.value = "no-protocol"
-    return
-  }
-
-  status.value = "loading"
-  errorMessage.value = ""
-
-  try {
-    if (protocol.value.type === "file") {
-      files.value = [protocol.value.path.split(/[\\/]/).pop()!]
-      await openFile(files.value[0])
-      status.value = "ready"
-      return
-    }
-
-    // folder protocol — list .aimd files inside
-    const entries: { name: string; is_dir: boolean }[] = await invoke("list_files", {
-      dir: resolveWorkspacePath(workspaceStore.current.path, protocol.value.path),
-    })
-    files.value = entries.filter((f) => !f.is_dir && f.name.endsWith(".aimd")).map((f) => f.name)
-
-    if (files.value.length === 0) {
-      status.value = "no-files"
-      return
-    }
-
-    const target = files.value[0]
-    await openFile(target)
-    status.value = "ready"
-  } catch (error) {
-    errorMessage.value = String(error)
-    status.value = "error"
-    message.error(errorMessage.value)
-  }
-}
-
-async function openFile(filename: string) {
-  if (!protocol.value) return
-  const fullPath = resolveProtocolFilePath(workspaceStore.current?.path, protocol.value, filename)
-  content.value = await invoke<string>("read_file", { path: fullPath })
-  currentFileDirectory.value = await dirname(fullPath)
-  selectedFile.value = filename
-}
+useProtocolStepLiveActivity({
+  enabled: navigatorEnabled,
+  protocolTitle: computed(() => protocol.value?.title ?? protocol.value?.name),
+  anchors,
+  activeAnchorId,
+  record,
+  locale: computed(() => "en-US"),
+})
 
 async function handleFileSwitch(filename: string) {
-  await openFile(filename)
+  await protocolSession.handleFileSwitch(filename)
 }
 
 function openEditor() {
@@ -184,8 +99,21 @@ function openEditor() {
   router.push({ path: "/editor", query: { id: protocolId.value } })
 }
 
-onMounted(load)
-watch(protocolId, (newId, oldId) => { if (newId !== oldId) load() })
+onMounted(protocolSession.load)
+onMounted(() => {
+  message.info(`Protocol route mounted: ${String(protocolId.value ?? "missing")}`)
+})
+
+watch(protocolId, (nextId) => {
+  message.info(`Protocol route changed: ${String(nextId ?? "missing")}`)
+})
+
+watch(protocolId, (newId, oldId) => {
+  if (newId !== oldId) {
+    protocolSession.resetRecord()
+    void protocolSession.load()
+  }
+})
 </script>
 
 <template>
@@ -211,7 +139,7 @@ watch(protocolId, (newId, oldId) => { if (newId !== oldId) load() })
             <NButton @click="router.push('/projects')">
               {{ t("nav.projects") }}
             </NButton>
-            <NButton type="primary" @click="load">
+            <NButton type="primary" @click="protocolSession.load">
               Retry
             </NButton>
           </NSpace>
@@ -291,7 +219,7 @@ watch(protocolId, (newId, oldId) => { if (newId !== oldId) load() })
             <AimdRecorder
               v-model="record"
               :content="content"
-              :resolve-file="resolveWorkspaceAsset"
+              :resolve-file="protocolSession.resolveWorkspaceAsset"
               :type-plugins="recorderTypePlugins"
               locale="en-US"
             />

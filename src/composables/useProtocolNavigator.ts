@@ -1,4 +1,4 @@
-import { nextTick, onBeforeUnmount, ref, watch, type Ref } from "vue"
+import { nextTick, onBeforeUnmount, ref, watch, type ComputedRef, type Ref } from "vue"
 
 export type ProtocolAnchorKind = "section" | "step" | "check" | "table" | "quiz" | "callout"
 export type ProtocolAnchorStatus = "default" | "completed" | "warning" | "error"
@@ -17,7 +17,7 @@ export interface ProtocolAnchor {
 interface UseProtocolNavigatorOptions {
   scrollContainerRef: Ref<HTMLElement | null>
   contentRootRef: Ref<HTMLElement | null>
-  content: Ref<string>
+  content: Ref<string> | ComputedRef<string>
   enabled?: Ref<boolean>
 }
 
