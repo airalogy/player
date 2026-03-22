@@ -1,7 +1,6 @@
 import { computed, ref } from "vue"
 import { useRouter } from "vue-router"
 import { useWorkspaceStore } from "@/stores/workspace"
-import { tauriWorkspaceGateway } from "@/shared/platform/workspaceGateway"
 import type { WorkspaceInfo } from "@/shared/domain/workspace/workspaceTypes"
 
 export function useWelcomeWorkspace() {
@@ -14,7 +13,7 @@ export function useWelcomeWorkspace() {
     await workspaceStore.fetchRecentWorkspaces()
     loading.value = false
 
-    const isFirst = await tauriWorkspaceGateway.checkFirstLaunch()
+    const isFirst = await workspaceStore.checkFirstLaunch()
     if (!isFirst || recentWorkspaces.value.length > 0) {
       return null
     }
@@ -23,11 +22,9 @@ export function useWelcomeWorkspace() {
   }
 
   async function openExampleWorkspace(): Promise<WorkspaceInfo | null> {
-    const workspace = await tauriWorkspaceGateway.openExampleWorkspace()
+    const workspace = await workspaceStore.openExampleWorkspace()
     if (!workspace) return null
 
-    workspaceStore.setCurrentWorkspace(workspace)
-    await workspaceStore.fetchRecentWorkspaces()
     await router.push("/projects")
     return workspace
   }

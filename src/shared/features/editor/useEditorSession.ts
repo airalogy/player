@@ -1,10 +1,6 @@
 import { computed, ref, type ComputedRef } from "vue"
 import { resolveProtocolFilePath, resolveWorkspacePath } from "@/utils/workspacePaths"
-import {
-  tauriProtocolFileGateway,
-  type ProtocolFileEntry,
-  type ProtocolFileGateway,
-} from "@/shared/platform/protocolFileGateway"
+import { type ProtocolFileEntry, type ProtocolFileGateway } from "@/shared/platform/protocolFileGateway"
 
 export type EditorSessionStatus = "loading" | "no-protocol" | "no-files" | "ready" | "error"
 
@@ -26,12 +22,12 @@ interface UseEditorSessionOptions {
     markClean: () => void
     setContent: (content: string) => void
   }
-  gateway?: ProtocolFileGateway
+  gateway: ProtocolFileGateway
   onError?: (message: string) => void
 }
 
 export function useEditorSession(options: UseEditorSessionOptions) {
-  const gateway = options.gateway ?? tauriProtocolFileGateway
+  const { gateway } = options
 
   const status = ref<EditorSessionStatus>("loading")
   const files = ref<string[]>([])

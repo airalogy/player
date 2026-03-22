@@ -70,6 +70,31 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     }
   }
 
+  async function checkFirstLaunch(): Promise<boolean> {
+    try {
+      return await tauriWorkspaceGateway.checkFirstLaunch()
+    } catch (e) {
+      error.value = String(e)
+      return false
+    }
+  }
+
+  async function openExampleWorkspace(): Promise<WorkspaceInfo | null> {
+    loading.value = true
+    error.value = null
+    try {
+      const info = await tauriWorkspaceGateway.openExampleWorkspace()
+      current.value = info
+      await fetchRecentWorkspaces()
+      return info
+    } catch (e) {
+      error.value = String(e)
+      return null
+    } finally {
+      loading.value = false
+    }
+  }
+
   function setCurrentWorkspace(workspace: WorkspaceInfo | null): void {
     current.value = workspace
   }
@@ -84,6 +109,8 @@ export const useWorkspaceStore = defineStore("workspace", () => {
     fetchRecentWorkspaces,
     removeRecentWorkspace,
     setLastOpenedProtocol,
+    checkFirstLaunch,
+    openExampleWorkspace,
     setCurrentWorkspace,
   }
 })

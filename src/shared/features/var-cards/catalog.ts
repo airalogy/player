@@ -9,15 +9,15 @@ import {
   matchesVarCard,
   normalizeUserVarCard,
 } from "@/shared/domain/var-cards/catalog"
-import { tauriVarCardGateway, type VarCardGateway } from "@/shared/platform/var-cards"
+import { type VarCardGateway } from "@/shared/platform/var-cards"
 
 export interface VarCardCatalogStateOptions {
-  gateway?: VarCardGateway
+  gateway: VarCardGateway
   builtinCards?: VarCardManifest[]
 }
 
-export function createVarCardCatalogState(options: VarCardCatalogStateOptions = {}) {
-  const gateway = options.gateway ?? tauriVarCardGateway
+export function createVarCardCatalogState(options: VarCardCatalogStateOptions) {
+  const { gateway } = options
   const builtinCards = ref<VarCardManifest[]>(options.builtinCards ?? getBuiltinVarCardManifests())
   const userCards = ref<VarCardManifest[]>([])
   const selectedCardId = ref<VarCardKey | null>(null)

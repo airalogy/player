@@ -2,11 +2,7 @@ import { computed, ref, type ComputedRef, type Ref } from "vue"
 import type { AimdProtocolRecordData } from "@airalogy/aimd-recorder"
 import { createEmptyProtocolRecordData } from "@airalogy/aimd-recorder"
 import { isAbsoluteFilesystemPath, resolveProtocolFilePath, resolveWorkspacePath } from "@/utils/workspacePaths"
-import {
-  tauriProtocolFileGateway,
-  type ProtocolFileEntry,
-  type ProtocolFileGateway,
-} from "@/shared/platform/protocolFileGateway"
+import { type ProtocolFileEntry, type ProtocolFileGateway } from "@/shared/platform/protocolFileGateway"
 
 export type ProtocolSessionStatus =
   | "loading"
@@ -27,7 +23,7 @@ export interface ProtocolSessionProtocol {
 interface UseProtocolSessionOptions {
   workspacePath: ComputedRef<string | null | undefined>
   protocol: ComputedRef<ProtocolSessionProtocol | null | undefined>
-  gateway?: ProtocolFileGateway
+  gateway: ProtocolFileGateway
   onLoadStart?: (protocolId: string | undefined) => void
   onReady?: (protocolId: string) => void
   onNoWorkspace?: () => void
@@ -77,7 +73,7 @@ function resolveRelativeFilesystemPath(baseDir: string, relativePath: string): s
 }
 
 export function useProtocolSession(options: UseProtocolSessionOptions) {
-  const gateway = options.gateway ?? tauriProtocolFileGateway
+  const { gateway } = options
 
   const status = ref<ProtocolSessionStatus>("loading")
   const files = ref<string[]>([])

@@ -12,6 +12,7 @@ import { useVarCardRecorder } from "@/composables/useVarCardRecorder"
 import { useMediaQuery } from "@vueuse/core"
 import { useProtocolStepLiveActivity } from "@/composables/useProtocolStepLiveActivity"
 import { useProtocolSession } from "@/shared/features/protocol/useProtocolSession"
+import { tauriProtocolFileGateway } from "@/shared/platform/protocolFileGateway"
 
 const router = useRouter()
 const route = useRoute()
@@ -36,6 +37,7 @@ const protocol = computed(() =>
 const protocolSession = useProtocolSession({
   workspacePath: computed(() => workspaceStore.current?.path),
   protocol,
+  gateway: tauriProtocolFileGateway,
   onLoadStart: (id) => {
     message.info(`Protocol load start: ${String(id ?? "missing")}`)
   },

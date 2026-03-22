@@ -10,6 +10,7 @@ import { useEditorStore } from "@/stores/editor"
 import { createEditorVarTypePresets } from "@/features/var-cards/runtime/createEditorVarTypePresets"
 import { useVarCardStore } from "@/stores/varCards"
 import { useEditorSession } from "@/shared/features/editor/useEditorSession"
+import { tauriProtocolFileGateway } from "@/shared/platform/protocolFileGateway"
 
 const router = useRouter()
 const route = useRoute()
@@ -39,6 +40,7 @@ const editorSession = useEditorSession({
   workspacePath: computed(() => workspaceStore.current?.path),
   protocol,
   editorStore,
+  gateway: tauriProtocolFileGateway,
   onError: (value) => {
     message.error(value)
   },
@@ -61,7 +63,7 @@ async function save() {
   const saved = await editorSession.save()
   if (saved) {
     message.success(t("editor.saved"))
-  } else {
+  } else if (!errorMessage.value) {
     message.error(t("editor.saveFailed"))
   }
 }
